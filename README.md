@@ -1,4 +1,4 @@
-# facial_recognition_software
+# Facial_recognition_software
 Facial Recognition implemented Log based Surveillance System.
 
 Bengalathon – Solution Concept Note
