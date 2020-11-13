@@ -25,7 +25,10 @@ def captures(names):
 
     id = 0
         
-    cam = cv2.VideoCapture(0)
+    try:
+        cam = cv2.VideoCapture(1)
+    except:
+        cam = cv2.VideoCapture(0)
 
     #Variable to counter valid and invalid
     valid=0
@@ -89,7 +92,7 @@ def captures(names):
                         flag=1
                         break
 
-                    alerts.alert(data)
+                    #alerts.alert(data)
                     invalid=0
                     valid=0
                 else:

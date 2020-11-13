@@ -31,17 +31,38 @@
           font-size: 3.5rem;
         }
       }
-    </style>
-    <!-- Custom styles for this template -->
+
+	h1,h2 {
+    margin:0;
+    padding:4px;
+    font:bold 1.5em verdana;
+    border-bottom:1px solid #000;
+	}
+
+	code {
+    font-size:1.2em;
+    color:#069;
+	}
+
+	</style>
     <link href="album.css" rel="stylesheet">
   </head>
 
-  
+  <script>
+	function call_submit(){
+	alert("Details sucessfully saved.");}
+	function start(){
+	alert("Look at the webcam. System will capture.");}
+	function submit_no(){
+	alert("Submitted no. details for alert.");}
+	function start_train(){
+	alert("Model will start to train on GPU.");}
+  </script>
   
   <body>
     <header>
         
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <a class="navbar-brand" href="{%url 'home'%}">Entry/Exit portal</a>
 
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"  >

@@ -87,7 +87,7 @@ def remote(url,names):
                         flag=1
                         break
 
-                    alerts.alert(data)
+                    #alerts.alert(data)
                     invalid=0
                     valid=0
                 else:

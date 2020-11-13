@@ -14,7 +14,7 @@ Username: {{user}}
     {%csrf_token%}
 <p>First Name: <input type="text" name="fname" value={{fn}} ></p>
 <p>Last Name: <input type="text" name="lname" value={{ln}} ></p>
-<input class="btn btn-primary" type="submit" value="Save changes"/>
+<input onclick="call_submit()" class="btn btn-primary" type="submit" value="Save changes"/>
 </form>
 
 <br>
@@ -23,7 +23,7 @@ Username: {{user}}
 
 <br>
 <h4>About</h4>
-<textarea rows="5" cols="100">This employee details belongs to this security application.
+<textarea readonly rows="5" cols="100">This employee details belongs to this security application.
 None of this will be shared or data publicised.
 You cannot view or delete any data from the server.
 Your account cannot be deleted once created.
