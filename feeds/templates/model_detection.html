@@ -17,7 +17,7 @@
 
 <form method="POST" action="{%url 'train' %}">
     {%csrf_token%}
-        <input class="btn btn-primary" type="submit" value="Train the model!" />
+        <input onclick="start_train()" class="btn btn-primary" type="submit" value="Train the model!" />
     
 </form>
 

@@ -2,7 +2,7 @@ from django.shortcuts import render
 from os import listdir
 import cv2
 import sys
-from PIL import Image
+from PIL import Image,ImageOps 
 import start
 import remote_start
 
@@ -13,8 +13,9 @@ def fetch(request):
 
     get=request.FILES['id_image']
  
-    path=user+"/img"+str(l+1)+".jpg"
+    path=user+"/"+str(l+1)+".jpg"
     img=Image.open(get)
+    img=ImageOps.grayscale(img) 
     img.save(path)
 
     return render(request,'page2.html',{'msg':'Got your image uploaded'})
