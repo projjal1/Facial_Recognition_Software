@@ -25,10 +25,12 @@ def captures(names):
 
     id = 0
         
+    #Options for external webcam on Windows and Linux
     try:
-        cam = cv2.VideoCapture(1)
-    except:
-        cam = cv2.VideoCapture(0)
+        if platform=='linux':
+            cam = cv2.VideoCapture(2)
+        elif platform=='win32':
+            cam = cv2.VideoCapture(1)
 
     #Variable to counter valid and invalid
     valid=0
