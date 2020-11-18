@@ -1,9 +1,14 @@
 import cv2
 import os
+from sys import platform
  
 def record_vid(id,l):
+    #Options for external webcam on Windows and Linux
     try:
-        cam = cv2.VideoCapture(1)
+        if platform=='linux':
+            cam = cv2.VideoCapture(2)
+        elif platform=='win32':
+            cam = cv2.VideoCapture(1)
     except:
         cam = cv2.VideoCapture(0)
         
