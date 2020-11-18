@@ -8,8 +8,6 @@ import datetime
 import time
 
 def captures(names):
-
-
     file1=open("admin_files/logs.txt","a+")
     file2=open("admin_files/mobile_no.txt","r")
 
@@ -31,6 +29,8 @@ def captures(names):
             cam = cv2.VideoCapture(2)
         elif platform=='win32':
             cam = cv2.VideoCapture(1)
+    except:
+        cam = cv2.VideoCapture(0)
 
     #Variable to counter valid and invalid
     valid=0
@@ -51,7 +51,6 @@ def captures(names):
             minSize=(10,10)
         )
 
-     
         for(x,y,w,h) in faces:
 
             cv2.rectangle(img, (x,y), (x+w,y+h), (0,0,255), 2)
@@ -107,10 +106,7 @@ def captures(names):
         cv2.imshow('camera',img)
         if  cv2.waitKey(1) &0xFF == ord('q'):
             break
-             
-           
                 
-        
     cam.release()
     cv2.destroyAllWindows()
 

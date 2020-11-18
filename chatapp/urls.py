@@ -8,4 +8,5 @@ urlpatterns = [
     path('accounts/',include('accounts.urls')),
     path('reg/',include('records.urls')),
     path('feed_detect/',include('feeds.urls')),
+    path('emotion/',include('emotion.urls')),
 ]
