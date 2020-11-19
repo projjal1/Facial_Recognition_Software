@@ -15,7 +15,7 @@ def login(request):
         user=auth.authenticate(username=request.POST['username'],password=request.POST['pass1'])
         if (user!=None):
             auth.login(request,user)
-            return render(request,"home.html")
+            return redirect("home")
         else:
             return render(request,"log.html",{'error':'User does not exist or password is wrong.'})
     else:
@@ -43,7 +43,7 @@ def signup(request):
                     user=User.objects.create_user(field1,password=field2,first_name=field3,last_name=field4)
                     auth.login(request,user)
                     os.system("mkdir "+field1)
-                    return render(request,"home.html")
+                    return redirect("home")
                 else:
                     return render(request,'sign.html',{'error':'* Fill all details *'})
 

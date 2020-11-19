@@ -50,7 +50,7 @@ def remote(url,names):
             cv2.rectangle(img, (x,y), (x+w,y+h), (0,0,255), 2)
             id, confidence = recognizer.predict(gray[y:y+h,x:x+w])
             text=""
-            if(confidence<53):
+            if(confidence<48):
                 valid+=1
                 text=names[id]
                 if(valid>=60):
@@ -87,7 +87,7 @@ def remote(url,names):
                         flag=1
                         break
 
-                    #alerts.alert(data)
+                    alerts.alert(data)
                     invalid=0
                     valid=0
                 else:

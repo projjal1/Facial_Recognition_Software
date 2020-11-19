@@ -15,7 +15,6 @@
 <img height="250" src="/static/images/surveillance.jpg">
 <br>
 <h2>Capture from remote device.</h2>
-<br>
 <form method="POST" action="{%url 'with_url' %}">
 {%csrf_token%}
 
@@ -31,7 +30,6 @@
 <br>
 <br>
 <h2>Capture from local server-webcam.</h2>
-<br>
 <form method="POST" action="{%url 'without_url' %}">
     {%csrf_token%}
         <input class="btn btn-primary" type="submit" value="Train Model and Start Capture!" />

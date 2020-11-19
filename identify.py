@@ -23,12 +23,8 @@ def captures(names):
 
     id = 0
         
-    #Options for external webcam on Windows and Linux
     try:
-        if platform=='linux':
-            cam = cv2.VideoCapture(2)
-        elif platform=='win32':
-            cam = cv2.VideoCapture(1)
+        cam = cv2.VideoCapture(1)
     except:
         cam = cv2.VideoCapture(0)
 
@@ -51,12 +47,13 @@ def captures(names):
             minSize=(10,10)
         )
 
+     
         for(x,y,w,h) in faces:
 
             cv2.rectangle(img, (x,y), (x+w,y+h), (0,0,255), 2)
             id, confidence = recognizer.predict(gray[y:y+h,x:x+w])
             text=""
-            if(confidence<50):
+            if(confidence<53):
                 valid+=1
                 text=names[id]
                 if(valid>=60):
@@ -93,7 +90,7 @@ def captures(names):
                         flag=1
                         break
 
-                    #alerts.alert(data)
+                    alerts.alert(data)
                     invalid=0
                     valid=0
                 else:
@@ -106,7 +103,10 @@ def captures(names):
         cv2.imshow('camera',img)
         if  cv2.waitKey(1) &0xFF == ord('q'):
             break
+             
+           
                 
+        
     cam.release()
     cv2.destroyAllWindows()
 
