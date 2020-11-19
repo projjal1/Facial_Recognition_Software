@@ -46,3 +46,5 @@ def begin():
     recognizer.train(faces, np.array(ids))
 
     recognizer.write('trainer.yml')
+    
+

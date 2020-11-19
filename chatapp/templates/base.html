@@ -1,5 +1,5 @@
 <!doctype html>
-{% load staticfiles%}
+{% load static %}
 
 <html lang="en">
   <head>
@@ -31,23 +31,11 @@
           font-size: 3.5rem;
         }
       }
-
-	h1,h2 {
-    margin:0;
-    padding:4px;
-    font:bold 1.5em verdana;
-    border-bottom:1px solid #000;
-	}
-
-	code {
-    font-size:1.2em;
-    color:#069;
-	}
-
-	</style>
+    </style>
+    <!-- Custom styles for this template -->
     <link href="album.css" rel="stylesheet">
   </head>
-
+  
   <script>
 	function call_submit(){
 	alert("Details sucessfully saved.");}
@@ -58,11 +46,13 @@
 	function start_train(){
 	alert("Model will start to train on GPU.");}
   </script>
+
+  
   
   <body>
     <header>
         
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <a class="navbar-brand" href="{%url 'home'%}">Entry/Exit portal</a>
 
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"  >
@@ -73,10 +63,6 @@
 
   <div class="collapse navbar-collapse" id="navbarSupportedContent">
     <ul class="navbar-nav ml-auto">
-
-      <li class="nav-item">
-        <a class="nav-link" href="{%url 'emotion-detect'%}">Emotion Detect</a>
-      </li>
 
       {% if user.is_authenticated %}
 

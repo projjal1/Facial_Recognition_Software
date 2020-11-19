@@ -42,7 +42,7 @@
 {%endif %}
 
 <form action={%url 'add-face'%}>
-    <input onclick="start()" class="btn btn-primary" type="submit" value="Train from server-webcam"/>
+    <input onclick="start()" class="btn btn-primary" type="submit" value="Capture from server-webcam"/>
 </form>
 
 <br>
@@ -51,7 +51,7 @@
     {%csrf_token%}
     <p>Train from remote webcam</p>
     URL:<input type="text" name="link">
-    <input class="btn btn-primary" type="submit" value="Train from remote-webcam"/>
+    <input onclick="start()" class="btn btn-primary" type="submit" value="Capture from remote-webcam"/>
 </form>
 
 <br>
