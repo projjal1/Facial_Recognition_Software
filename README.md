@@ -19,7 +19,7 @@ The software is a Proof of Work concept produced as a solution in Hackathon and 
 <h2>Dependencies</h2>
 <ul><li>Python3</li>
 <li>OpenCv</li>
-<li>Django</li>
+<li>Django</li></ul>
 
 <h2>Preferences</h2>
 A computer with a discrete GPU is prefered as it will train the model fast with the images fed.
