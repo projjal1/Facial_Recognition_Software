@@ -1,3 +1,5 @@
+#Script to send SMS to phone for uidentified users
+
 import requests
 
 def alert(x):
