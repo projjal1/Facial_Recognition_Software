@@ -1,3 +1,5 @@
+#This module is used to start the identification process using remote stream
+
 import cv2
 import sys
 import requests

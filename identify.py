@@ -1,3 +1,5 @@
+#This module is used to start identification using local webcam
+
 import cv2
 import numpy as np
 import sys

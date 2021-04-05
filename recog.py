@@ -1,3 +1,5 @@
+#This module is used to train the model with the user image data
+
 import cv2
 import numpy as np
 from PIL import Image
@@ -46,5 +48,3 @@ def begin():
     recognizer.train(faces, np.array(ids))
 
     recognizer.write('trainer.yml')
-    
-
