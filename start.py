@@ -2,7 +2,7 @@ import cv2
 import os
  
 def record_vid(id,l):
-=   cam = cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(0)
     path='haarcascade_frontalface_default.xml'
     face_detector = cv2.CascadeClassifier(path)
  
