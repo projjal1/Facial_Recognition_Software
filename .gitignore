@@ -1,5 +1,3 @@
 __pycache__/
-s*/
 */__pycache__/
-db.sqlite3
 trainer.yml

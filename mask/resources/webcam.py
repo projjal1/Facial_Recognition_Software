@@ -65,10 +65,7 @@ def detect_and_predict_mask(frame, faceNet, maskNet):
 
 def capture():
 	# initialize the video stream
-	try:
-		vs = cv2.VideoCapture(1)
-	except:
-		vs = cv2.VideoCapture(0)
+	vs = cv2.VideoCapture(0)
 
 	while True:
     	# Capturing frame-by-frame, grabbing the frame from the threaded video stream and resize it to have a maximum width of 400 pixels

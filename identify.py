@@ -25,10 +25,7 @@ def captures(names):
 
     id = 0
         
-    try:
-        cam = cv2.VideoCapture(1)
-    except:
-        cam = cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(0)
 
     #Variable to counter valid and invalid
     valid=0
