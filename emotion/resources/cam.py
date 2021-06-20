@@ -7,10 +7,7 @@ model = FacialExpressionModel()
 font = cv2.FONT_HERSHEY_SIMPLEX
 
 def capture():
-    try:
-        video_capture=cv2.VideoCapture(1)
-    except:
-        video_capture=cv2.VideoCapture(0)
+    video_capture=cv2.VideoCapture(0)
 
     while True:
         # Capture frame-by-frame
