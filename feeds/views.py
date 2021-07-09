@@ -37,7 +37,7 @@ def start(request):
     user_objects=User.objects.all()
     for each in user_objects:
         get_name=each.username
-        if(get_name=='admin'):
+        if not get_name.startswith('s'):
             continue
         subjects.append(get_name)
 
