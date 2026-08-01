@@ -1,105 +1,133 @@
-from django.shortcuts import render
-from django.shortcuts import render,redirect
-from django.contrib.auth.models import User
-from django.contrib import auth
+import logging
 import os
-from os import listdir
+import re
+
+from django.conf import settings
+from django.contrib import auth
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User
+from django.shortcuts import redirect, render
+
+import admin_state
+
+logger = logging.getLogger(__name__)
+
+# The navbar hides the admin links, but hiding a link is not access control -
+# the URLs answered to anyone before this was added.
+superuser_required = user_passes_test(lambda user: user.is_superuser)
+
+
+def _image_count(username):
+    """How many enrolled images the user has, tolerating a missing folder."""
+    try:
+        return len(os.listdir(os.path.join(settings.BASE_DIR, username)))
+    except FileNotFoundError:
+        return 0
 
 
 def base(request):
-    return render(request,"home.html")
-    
+    return render(request, "home.html")
 
-def login(request): 
-    if request.method=="POST":
-        user=auth.authenticate(username=request.POST['username'],password=request.POST['pass1'])
-        if (user!=None):
-            auth.login(request,user)
+
+def login(request):
+    if request.method == "POST":
+        user = auth.authenticate(
+            username=request.POST['username'],
+            password=request.POST['pass1'],
+        )
+        if user is not None:
+            auth.login(request, user)
             return redirect("home")
-        else:
-            return render(request,"log.html",{'error':'User does not exist or password is wrong.'})
-    else:
-        return render(request,"log.html")
+        return render(request, "log.html",
+                      {'error': 'User does not exist or password is wrong.'})
+    return render(request, "log.html")
+
 
 def logout(request):
-    if request.method=="POST":
+    # Only POST actually logs out, so a link prefetch cannot end a session. A
+    # GET used to fall off the end of the function and return None, which Django
+    # raises on; send it home instead.
+    if request.method == "POST":
         auth.logout(request)
-        return redirect("home")
+    return redirect("home")
+
 
 def signup(request):
-    if request.method=="POST":
-        if request.POST['pass1']==request.POST['pass2']:
-            try:
-                user=User.objects.get(username=request.POST['username'])
-                return render(request,'sign.html',{'error':'Sorry, Username already taken.'})
-            except User.DoesNotExist:
+    if request.method != "POST":
+        return render(request, 'sign.html')
 
-                field1=request.POST['username']
-                field2=request.POST['pass1']
-                field3=request.POST['first']
-                field4=request.POST['last']
+    if request.POST['pass1'] != request.POST['pass2']:
+        return render(request, 'sign.html',
+                      {'error': 'Sorry, Passwords do not match.'})
 
-                if(field1 and field2 and field3 and field4):
-                    user=User.objects.create_user(field1,password=field2,first_name=field3,last_name=field4)
-                    auth.login(request,user)
-                    os.system("mkdir "+field1)
-                    return redirect("home")
-                else:
-                    return render(request,'sign.html',{'error':'* Fill all details *'})
+    username = request.POST['username']
+    password = request.POST['pass1']
+    first_name = request.POST['first']
+    last_name = request.POST['last']
 
-        else:
-            return render(request,'sign.html',{'error':'Sorry, Passwords do not match.'}) 
-    else:
-        return render(request,'sign.html')
+    if not (username and password and first_name and last_name):
+        return render(request, 'sign.html', {'error': '* Fill all details *'})
+
+    # The trainer derives each person's numeric label from their folder name, so
+    # a username outside this shape is never trained and the account silently
+    # never gets recognised. Rejecting it here turns that into a visible error.
+    # It also means the value below is safe to use as a path component.
+    if not re.match(settings.FACE_USERNAME_PATTERN, username):
+        return render(request, 'sign.html', {
+            'error': 'Username must be the letter s followed by a number, '
+                     'for example s1 or s12.',
+        })
+
+    if User.objects.filter(username=username).exists():
+        return render(request, 'sign.html',
+                      {'error': 'Sorry, Username already taken.'})
+
+    user = User.objects.create_user(
+        username, password=password, first_name=first_name, last_name=last_name)
+    auth.login(request, user)
+
+    # Previously os.system("mkdir " + username), which handed an unvalidated
+    # POST field to the shell.
+    os.makedirs(os.path.join(settings.BASE_DIR, username), exist_ok=True)
+    logger.info("Created account and image folder for %s.", username)
+
+    return redirect("home")
 
 
+@login_required
+@superuser_required
 def profile(request):
-    if request.method=="POST":
-        no=request.POST['mobile']
-        file=open("admin_files/mobile_no.txt","w")
-        file.write(no)
-        file.close()
+    if request.method == "POST":
+        admin_state.write(admin_state.MOBILE_NO, request.POST['mobile'])
+        logger.info("Alert number updated by %s.", request.user.username)
 
-       
-    mobile_no=""
-    file=open("admin_files/mobile_no.txt","r")
-    mobile_no=file.read()
-    file.close()
+    return render(request, 'profile.html',
+                  {'no': admin_state.read(admin_state.MOBILE_NO)})
 
-    return render(request,'profile.html',{'no':mobile_no})
 
+@login_required
+@superuser_required
 def logs(request):
-    if request.method=="POST":
-        file=open("admin_files/logs.txt","w")
-        file.write("")
-        file.close()
+    if request.method == "POST":
+        admin_state.write(admin_state.LOGS, '')
+        logger.info("Entry log cleared by %s.", request.user.username)
 
-    file=open("admin_files/logs.txt","r")
-    data=file.readlines()
-    file.close()
+    return render(request, 'logs.html',
+                  {'data': admin_state.read(admin_state.LOGS).splitlines()})
 
-    return render(request,'logs.html',{'data':data})
 
+@login_required
 def about(request):
-    user=request.user.username
-    if request.method=='POST':
-        user_obj=User.objects.get(username=request.user.username)
-        fn=request.POST['fname']
-        ln=request.POST['lname']
-        user_obj.first_name=fn
-        user_obj.last_name=ln
-        user_obj.save()
+    username = request.user.username
 
-        arr=listdir(user)
-        l=len(arr)
+    if request.method == 'POST':
+        user = request.user
+        user.first_name = request.POST['fname']
+        user.last_name = request.POST['lname']
+        user.save()
 
-        return render (request,'about.html',{'fn':fn,'ln':ln,'record':l})
-
-    else:
-        fn=request.user.first_name
-        ln=request.user.last_name
-
-        arr=listdir(user)
-        l=len(arr)
-
-        return render (request,'about.html',{'fn':fn,'ln':ln,'record':l})
+    return render(request, 'about.html', {
+        'fn': request.user.first_name,
+        'ln': request.user.last_name,
+        'record': _image_count(username),
+    })

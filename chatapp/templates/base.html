@@ -64,6 +64,8 @@
   <div class="collapse navbar-collapse" id="navbarSupportedContent">
     <ul class="navbar-nav ml-auto">
 
+      {% if user.is_authenticated %}
+
       <li class="nav-item">
         <a class="nav-link" href="{%url 'emotion'%}">Emotion Detect</a>
       </li>
@@ -72,7 +74,6 @@
         <a class="nav-link" href="{%url 'face_mask'%}">Mask Detect</a>
       </li>
 
-      {% if user.is_authenticated %}
 
       <li class="nav-item ">
           <a class="nav-link" >Signed in as {{request.user.username}}.<span class="sr-only">(current)</span></a>

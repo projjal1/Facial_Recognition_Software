@@ -2,6 +2,10 @@
 
 {%block content%}
 
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
+
 <h1>
     Entry/Exit Portal site.
 </h1>

@@ -26,10 +26,26 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # the variable for anything beyond a quick local run.
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or secrets.token_urlsafe(50)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+def _env_flag(name, default):
+    return os.environ.get(name, str(default)).strip().lower() in ('1', 'true', 'yes', 'on')
 
-ALLOWED_HOSTS = ['*']
+
+# SECURITY WARNING: don't run with debug turned on in production!
+# Defaults on so a local `runserver` still serves static files; set
+# DJANGO_DEBUG=false anywhere it is deployed.
+DEBUG = _env_flag('DJANGO_DEBUG', True)
+
+# Permissive while debugging, which suits a webcam on a LAN. With DEBUG off the
+# hosts must be named explicitly, so a deployment cannot answer to any Host
+# header it is handed.
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+else:
+    ALLOWED_HOSTS = [
+        host.strip()
+        for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
+        if host.strip()
+    ]
 
 
 # Application definition
@@ -94,6 +110,12 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
 
+# This project's sign-in page is /accounts/signin/, not Django's default
+# /accounts/login/, so @login_required would otherwise redirect to a 404.
+# Both are URL names, resolved by reverse().
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'home'
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -132,3 +154,59 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT=os.path.join(BASE_DIR,'media')
 MEDIA_URL='/media/'
+
+
+# Recognition tuning
+# https://github.com/projjal1/Facial_Recognition_Software
+#
+# These used to be literals inside identify.py and webcam.py, and the two paths
+# disagreed on the confidence cut-off (53 local, 48 remote) for no recorded
+# reason. Both values are kept as they were so behaviour is unchanged, but they
+# are uncalibrated guesses - deriving them from a false-accept/false-reject
+# sweep is a separate piece of work.
+
+FACE_CONFIDENCE_THRESHOLD_LOCAL = int(os.environ.get('FACE_CONFIDENCE_THRESHOLD_LOCAL', 53))
+FACE_CONFIDENCE_THRESHOLD_REMOTE = int(os.environ.get('FACE_CONFIDENCE_THRESHOLD_REMOTE', 48))
+
+# Consecutive confident frames before an entry is logged, and consecutive
+# failures before an alert is sent.
+FACE_FRAMES_TO_LOG = int(os.environ.get('FACE_FRAMES_TO_LOG', 60))
+FACE_FRAMES_TO_ALERT = int(os.environ.get('FACE_FRAMES_TO_ALERT', 150))
+
+# Images captured per enrolment run.
+FACE_ENROLMENT_FRAMES = int(os.environ.get('FACE_ENROLMENT_FRAMES', 15))
+
+# Usernames that own a face-image folder must match this, because the trainer
+# derives each person's numeric label from the folder name. Enforcing it at
+# signup turns a silent "never trained" failure into an immediate error.
+FACE_USERNAME_PATTERN = r'^s\d+$'
+
+# Optional strict allowlist of camera hosts. Empty means fall back to the
+# scheme/loopback/link-local checks in security.validate_camera_url.
+CAMERA_URL_ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get('CAMERA_URL_ALLOWED_HOSTS', '').split(',')
+    if host.strip()
+]
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '{levelname} {asctime} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': os.environ.get('DJANGO_LOG_LEVEL', 'INFO'),
+    },
+}

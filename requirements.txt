@@ -20,7 +20,10 @@ requests==2.31.0
 # both apps at startup, so the server will not boot without these installed even
 # if those pages are never opened.
 #
-# Keep TensorFlow below 2.16: emotion/resources/model.py imports
-# tensorflow.python.keras.backend, which was removed by the Keras 3 switch.
+# Keep TensorFlow below 2.16 for now. The dead tensorflow.python.keras import
+# that used to force this has been removed, so the remaining constraint is the
+# bundled emotion model: model.json and model_weights.h5 are Keras 2 artifacts
+# and Keras 3 (TF 2.16+) changes how they load. Verify against a newer runtime
+# before raising this pin.
 tensorflow==2.11.0
 imutils==0.5.4
