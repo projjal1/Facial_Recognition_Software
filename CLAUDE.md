@@ -33,6 +33,16 @@ Both are optional and read via `os.environ.get` — nothing is committed.
 | `DJANGO_SECRET_KEY` | A throwaway key is generated per process, so every restart invalidates sessions and logs all users out. Set it for anything but a quick local run. |
 | `FAST2SMS_API_KEY` | `alerts.alert()` prints a notice and returns without sending; recognition otherwise continues normally. |
 
+### Committing
+
+Commit after each major change — a working feature, a fix, a finished refactor, a dependency or config change, a substantive docs rewrite — instead of letting work pile up. Use the **`commit-checkpoint`** skill, which holds the message format and the review steps, and run its guard before every commit:
+
+```bash
+python .claude/skills/commit-checkpoint/scripts/check_staged.py
+```
+
+The guard blocks face images, `db.sqlite3`, `trainer.yml`, hardcoded secrets and phone numbers from being staged — including via `git add -f`, which defeats `.gitignore`. Checkpoints are local; never push without being asked.
+
 **Always run `manage.py` from the repository root.** Nearly every path in the CV code is relative to the process CWD (`trainer.yml`, `haarcascade_frontalface_default.xml`, `admin_files/*.txt`, `emotion/resources/*`, `mask/resources/*`, and the per-user image folders).
 
 ## Architecture
