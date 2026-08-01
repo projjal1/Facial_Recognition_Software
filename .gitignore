@@ -1,5 +1,7 @@
 __pycache__/
 */__pycache__/
+.venv/
+venv/
 
 # LBPH model - derived from enrolled faces, never commit
 trainer.yml

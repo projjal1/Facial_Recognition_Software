@@ -79,7 +79,8 @@ ROOT_URLCONF = 'chatapp.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['chatapp/templates'],
+        # Absolute, so the templates resolve regardless of working directory.
+        'DIRS': [os.path.join(BASE_DIR, 'chatapp', 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -141,9 +142,14 @@ TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
-USE_L10N = True
+# USE_L10N was deprecated in Django 4.0 and removed in 5.0; localised formatting
+# is always on now.
 
 USE_TZ = True
+
+# Django 3.2 onward warns when this is unset. There are no models yet, but the
+# default applies to any that get added.
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Static files (CSS, JavaScript, Images)

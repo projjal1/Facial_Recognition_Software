@@ -1,29 +1,35 @@
-# Requires Python 3.7 - 3.9.
-# Django 2.2 does not support Python 3.10+, and numpy 1.21 is capped at <3.11.
+# Requires Python 3.12.
 #
-#   python -m venv venv
-#   venv\Scripts\activate      (Windows)
-#   source venv/bin/activate   (macOS / Linux)
+#   python -m venv .venv
+#   .venv\Scripts\activate      (Windows)
+#   source .venv/bin/activate   (macOS / Linux)
 #   pip install -r requirements.txt
 
-Django==2.2.28
+# 5.2 is the current LTS and needs Python 3.10+. The project was written
+# against 2.2, whose extended support ended in April 2022.
+Django==5.2.16
 
-# Must be the contrib build: the LBPH recogniser used by recog.py and identify.py
-# lives in cv2.face, which plain opencv-python does not ship.
-opencv-contrib-python==4.6.0.66
+# Must be the contrib build: the LBPH recogniser used by recog.py and
+# recognition.py lives in cv2.face, which plain opencv-python does not ship.
+# The 4.x line rather than 5.x, which is a major release with API changes.
+opencv-contrib-python==4.14.0.94
 
-numpy==1.21.6
-Pillow==9.5.0
-requests==2.31.0
+# Deliberately a range, not a pin: TensorFlow constrains numpy tightly and a
+# hard pin here tends to produce an unresolvable set.
+numpy>=2.0,<3
 
-# Required by the experimental emotion and mask detectors. chatapp/urls.py imports
-# both apps at startup, so the server will not boot without these installed even
-# if those pages are never opened.
-#
-# Keep TensorFlow below 2.16 for now. The dead tensorflow.python.keras import
-# that used to force this has been removed, so the remaining constraint is the
-# bundled emotion model: model.json and model_weights.h5 are Keras 2 artifacts
-# and Keras 3 (TF 2.16+) changes how they load. Verify against a newer runtime
-# before raising this pin.
-tensorflow==2.11.0
+Pillow==12.3.0
+requests==2.34.2
+
+# Required by the experimental emotion and mask detectors. chatapp/urls.py
+# imports both apps at startup, so the server does not boot without these.
+tensorflow==2.21.0
+
+# The bundled emotion and mask models are Keras 2 artifacts (model.json,
+# model_weights.h5, mask_recog2.h5). TensorFlow 2.16 switched tf.keras to
+# Keras 3, which cannot load them, so the legacy package is installed and
+# selected with TF_USE_LEGACY_KERAS=1 - set in the two modules that import
+# TensorFlow, before the import happens.
+tf-keras==2.21.0
+
 imutils==0.5.4

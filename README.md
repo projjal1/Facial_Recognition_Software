@@ -42,9 +42,9 @@ upload ──┘   (Haar crop)                                   └─► repea
 
 ## Requirements
 
-- **Python 3.7 – 3.9.** Django 2.2 does not run on Python 3.10+, so a newer interpreter will not work without upgrading the project first.
+- **Python 3.12**, with **Django 5.2 LTS**.
 - **`opencv-contrib-python`** — required, not plain `opencv-python`. The LBPH recogniser lives in `cv2.face`, which ships only in the contrib package.
-- **TensorFlow** (below 2.16) and **imutils** — needed even if you never open the experimental pages, because the URL configuration imports them at startup.
+- **TensorFlow** and **imutils** — needed even if you never open the experimental pages, because the URL configuration imports them at startup. `tf-keras` comes with them: the bundled emotion and mask models are Keras 2 artifacts, so `TF_USE_LEGACY_KERAS=1` is set before TensorFlow is imported.
 
 Exact pins are in [requirements.txt](requirements.txt), with the reasoning behind each constraint.
 

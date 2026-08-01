@@ -1,5 +1,11 @@
 import cv2
 import os
+
+# mask_recog2.h5 is a Keras 2 artifact. TensorFlow 2.16 switched tf.keras to
+# Keras 3, which cannot load it, so select the legacy implementation - this has
+# to happen before tensorflow is imported.
+os.environ.setdefault('TF_USE_LEGACY_KERAS', '1')
+
 from tensorflow.keras.preprocessing.image import img_to_array
 import tensorflow as tf
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input

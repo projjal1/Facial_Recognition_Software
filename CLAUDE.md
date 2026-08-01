@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Django 2.2 web portal (project package `chatapp`) that wraps OpenCV face recognition into a log-based entry/exit surveillance system. Originally a hackathon proof-of-work. There is no `requirements.txt`; the committed `__pycache__` is CPython 3.7.
+Django 5.2 LTS web portal (project package `chatapp`) that wraps OpenCV face recognition into a log-based entry/exit surveillance system. Originally a hackathon proof-of-work on Django 2.2, upgraded 2026-08-01. Runs on Python 3.12; pins are in `requirements.txt`.
 
 Dependencies used by the code: `django`, `opencv-contrib-python` (the `cv2.face` LBPH API is in contrib, not base `opencv-python`), `numpy`, `Pillow`, `requests`, `tensorflow`, `imutils`.
 

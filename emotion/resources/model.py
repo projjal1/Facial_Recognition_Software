@@ -1,3 +1,10 @@
+import os
+
+# model.json and model_weights.h5 are Keras 2 artifacts. TensorFlow 2.16
+# switched tf.keras to Keras 3, which cannot load them, so select the legacy
+# implementation - this has to happen before tensorflow is imported.
+os.environ.setdefault('TF_USE_LEGACY_KERAS', '1')
+
 from tensorflow.keras.models import model_from_json
 import numpy as np
 import tensorflow as tf
