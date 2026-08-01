@@ -1,0 +1,26 @@
+{%extends 'home.html'%}
+
+{% block content%}
+
+<h1>Detection running</h1>
+
+<p>Reading from <b>{{ source }}</b>. Recognised faces are written to the entry log.</p>
+
+<!-- The browser consumes the multipart stream directly; no JavaScript needed.
+     Leaving this page closes the connection, which releases the camera. -->
+<img src="{% url 'detect-stream' %}" alt="Live detection feed"
+     style="max-width:100%; border:1px solid #ccc;">
+
+<br><br>
+
+<form method="POST" action="{% url 'end' %}">
+    {% csrf_token %}
+    <input class="btn btn-primary" type="submit" value="Stop detection" />
+</form>
+
+<br>
+<p><b>Note:</b></p>
+<p>Closing this page or pressing Stop ends the capture and frees the camera.</p>
+<p>Only one capture can use the server webcam at a time.</p>
+
+{%endblock%}

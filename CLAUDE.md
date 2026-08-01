@@ -63,9 +63,29 @@ All `models.py` files are empty stubs and all `migrations/` contain only `__init
 
 `start.py`, `remote_start.py` (enroll: capture 15 face crops), `recog.py` (train LBPH → `trainer.yml`), `identify.py`, `webcam.py` (recognize: local webcam / remote URL), `alerts.py` (SMS). These are plain modules imported directly by views — not Django apps.
 
-### Critical: CV runs synchronously in the request cycle
+### Video is streamed to the browser; two paths still are not
 
-`records.views.get_face`, `feeds.views.start`, `feeds.views.train`, `emotion.views.detect`, and `mask.views.start_mask` call blocking OpenCV loops that open a `cv2.imshow` window **on the machine running the dev server**. The HTTP request does not return until the loop ends (user presses `q`, or the frame/confidence counters trip). This makes the app single-user and desktop-bound; keep it in mind before "fixing" anything that looks like a hang.
+Recognition and enrolment stream MJPEG. The chain is: `camera.local_frames()` /
+`camera.remote_frames(url)` yield raw frames → `recognition.frames()` /
+`enrolment.capture()` yield annotated ones → `streaming.mjpeg()` wraps each as a
+multipart JPEG part → a `StreamingHttpResponse` feeds an `<img>` tag. No
+JavaScript is involved; the browser consumes `multipart/x-mixed-replace` natively.
+
+Two consequences worth knowing before changing any of it:
+
+- **Closing the page is what stops a capture.** The write fails, Django stops
+  iterating, the generator is closed, and the `finally` in `camera.py` releases
+  the device. There is no `q` keypress any more, because there is no window.
+- **Errors must be raised before the response starts.** Once bytes are flowing
+  there is no way to send a status code. `streaming.primed()` pulls the first
+  frame inside the view precisely so a missing camera or untrained model still
+  renders as a normal error page. Keep new failure modes on that side of the
+  line, and note `feeds.views._not_ready()` does the same job for the page that
+  hosts the video.
+
+**Still blocking:** `emotion.views.detect` and `mask.views.start_mask` call
+`cv2.imshow` loops that open a window on the server and hold the request until
+it closes. Those two experimental paths remain desktop-bound.
 
 Because `chatapp/urls.py` includes `emotion.urls` and `mask.urls`, whose views import their `resources` modules at module scope, **TensorFlow loads the `.h5` models at server startup** — the server will not boot without `tensorflow` and `imutils` installed.
 

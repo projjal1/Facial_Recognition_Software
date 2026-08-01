@@ -3,8 +3,13 @@
 identify.py and webcam.py differ only in where frames come from, but each used
 to carry its own near-identical copy of this logic. That is how their
 confidence thresholds drifted apart - 53 in one, 48 in the other - with no
-record of why. Keeping the loop in one place means a tuning change applies to
-both, and the frame source is now the only thing either module supplies.
+record of why.
+
+This yields annotated frames rather than drawing them itself. Owning a window
+tied the whole feature to a desktop session on the server; handing frames back
+lets the caller decide, which is what allows an HTTP response to carry the
+video. When the consumer stops - a browser tab closing - this generator is
+closed and the frame source releases the camera on its way out.
 """
 
 import datetime
@@ -22,6 +27,11 @@ logger = logging.getLogger(__name__)
 
 CASCADE_PATH = 'haarcascade_frontalface_default.xml'
 MODEL_PATH = 'trainer.yml'
+
+# After logging someone, wait this long before logging them again. Previously a
+# time.sleep, which now would freeze the video for everyone watching; tracking a
+# deadline instead keeps the stream moving.
+LOG_COOLDOWN_SECONDS = 3
 
 
 def _load_recognizer():
@@ -51,8 +61,8 @@ def _send_alert(number):
         logger.exception("Could not send the alert SMS.")
 
 
-def run(frames, names, threshold):
-    """Recognise faces in `frames` until the operator presses q.
+def frames(source, names, threshold):
+    """Yield annotated frames, logging entries and raising alerts as it goes.
 
     `names` maps an LBPH label to a username. A label that is not in the map is
     treated as unrecognised rather than logged under someone else's name.
@@ -67,51 +77,44 @@ def run(frames, names, threshold):
 
     valid = 0
     invalid = 0
+    cooldown_until = 0.0
 
-    try:
-        for img in frames:
-            if img is None:
-                continue
+    for img in source:
+        if img is None:
+            continue
 
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            faces = cascade.detectMultiScale(
-                gray, scaleFactor=1.2, minNeighbors=3, minSize=(10, 10))
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        faces = cascade.detectMultiScale(
+            gray, scaleFactor=1.2, minNeighbors=3, minSize=(10, 10))
 
-            for (x, y, w, h) in faces:
-                cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
-                label, confidence = recognizer.predict(gray[y:y + h, x:x + w])
-                name = names.get(label)
+        for (x, y, w, h) in faces:
+            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
+            label, confidence = recognizer.predict(gray[y:y + h, x:x + w])
+            name = names.get(label)
 
-                if confidence < threshold and name:
-                    valid += 1
-                    if valid >= frames_to_log:
-                        _log_entry(name)
-                        valid = 0
-                        invalid = 0
-                        caption = "Logged to system"
-                        cv2.putText(img, caption, (x + 5, y - 5), font, 1,
-                                    (255, 255, 255), 2)
-                        cv2.imshow('camera', img)
-                        cv2.waitKey(1)
-                        time.sleep(3)
-                        continue
+            if confidence < threshold and name:
+                valid += 1
+                if valid < frames_to_log:
                     caption = "Detected " + name
+                elif time.monotonic() < cooldown_until:
+                    caption = "Logged - waiting before logging again"
                 else:
-                    invalid += 1
-                    if invalid >= frames_to_alert:
-                        _send_alert(alert_number)
-                        valid = 0
-                        invalid = 0
-                        caption = "Unrecognised face - system alerted"
-                    else:
-                        caption = "Detecting.."
+                    _log_entry(name)
+                    cooldown_until = time.monotonic() + LOG_COOLDOWN_SECONDS
+                    valid = 0
+                    invalid = 0
+                    caption = "Logged to system"
+            else:
+                invalid += 1
+                if invalid >= frames_to_alert:
+                    _send_alert(alert_number)
+                    valid = 0
+                    invalid = 0
+                    caption = "Unrecognised face - system alerted"
+                else:
+                    caption = "Detecting.."
 
-                cv2.putText(img, caption, (x + 5, y - 5), font, 1,
-                            (255, 255, 255), 2)
+            cv2.putText(img, caption, (x + 5, y - 5), font, 1,
+                        (255, 255, 255), 2)
 
-            cv2.imshow('camera', img)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-    finally:
-        # The frame source releases its own capture; this only owns the window.
-        cv2.destroyAllWindows()
+        yield img

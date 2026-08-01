@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def record_vid(username, existing, url):
+    """Annotated frames enrolling from a remote camera URL."""
     folder = face_store.folder_for(username, create=True)
     # Mirrored to match the local path, so a person sees themselves the same way
     # in both enrolment flows.

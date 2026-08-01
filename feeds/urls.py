@@ -6,6 +6,7 @@ urlpatterns = [
     path('detect-remote/',views.init_url,name='with_url'),
     path('detect-local/',views.init_server,name='without_url'),
     path('handler-start/',views.start,name='start'),
+    path('handler-stream/',views.stream,name='detect-stream'),
     path('handler-end/',views.end,name='end'),
     path('handler-train/',views.train,name='train'),
 ]

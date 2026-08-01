@@ -18,6 +18,11 @@
 <h1>Register your face here!</h1>
 <br>
 
+{% if error %}
+<p class="error">{{ error }}</p>
+<br>
+{% endif %}
+
 <div>
 
 <div class="left">
@@ -69,6 +74,6 @@
 <p><b>Note:</b></p>
 <p id="note">Take a close photo so that entire image contains only the face.</p>
 <p>On mobile devices this is going to snap images.</p>
-<p>On computers take a snapshot and upload it.(Live feed not possible due to resolution issues)</p>
+<p>The webcam options show a live feed in this page and stop on their own once enough images are captured.</p>
 
 {%endblock%}

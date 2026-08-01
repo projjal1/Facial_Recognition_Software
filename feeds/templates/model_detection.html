@@ -30,17 +30,8 @@
         <input class="btn btn-primary" type="submit" value="Start feed Capture!" />
     
 </form>
-This will start the webcam and record feed.  Press q to end capture.
+This will open the live feed in your browser. Leaving that page ends the capture.
 
-<br>
-<br>
-
-<form method="POST" action="{%url 'end' %}">
-    {%csrf_token%}
-        <input class="btn btn-primary" type="submit" value="End feed Capture!" />
-    
-</form>
-This will end the the process and redirect you back. 
 <br>
 <hr>
 <a href="{%url 'feed-detect'%}">Go back..</a>

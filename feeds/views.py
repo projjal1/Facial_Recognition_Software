@@ -1,15 +1,19 @@
 import logging
+import os
 import re
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
+from django.http import StreamingHttpResponse
 from django.shortcuts import render
 
 import admin_state
 import face_store
 import identify
 import recog
+import recognition
+import streaming
 import webcam
 from security import validate_camera_url
 
@@ -41,6 +45,21 @@ def _training_status():
     return "You have %d pending data. You should train the model" % pending
 
 
+def _not_ready():
+    """Why detection cannot start yet, or None when it can.
+
+    Checked before rendering the page rather than only inside the stream: once
+    a streaming response has begun there is no way to show an error, so the
+    viewer would just get a broken image with no explanation.
+    """
+    if not _label_names():
+        return ('No enrolled accounts yet. Sign up as s1 and register a face '
+                'before starting detection.')
+    if not os.path.exists(recognition.MODEL_PATH):
+        return 'No trained model yet. Train the model before starting detection.'
+    return None
+
+
 @login_required
 @superuser_required
 def detection(request):
@@ -69,34 +88,52 @@ def init_server(request):
 @login_required
 @superuser_required
 def start(request):
-    names = _label_names()
-    if not names:
-        return render(request, "start_captures.html", {
-            'error': 'No enrolled accounts yet. Sign up as s1 and register a '
-                     'face before starting detection.',
-        })
+    """The page that holds the video. The frames come from `stream` below."""
+    problem = _not_ready()
+    if problem:
+        return render(request, "start_captures.html", {'error': problem})
 
+    source = admin_state.read(admin_state.LINK).strip()
+    return render(request, "live_detect.html", {
+        'source': source or 'the server webcam',
+    })
+
+
+@login_required
+@superuser_required
+def stream(request):
+    """The MJPEG body consumed by the <img> tag on the detection page."""
+    problem = _not_ready()
+    if problem:
+        return render(request, "start_captures.html", {'error': problem})
+
+    names = _label_names()
     url = admin_state.read(admin_state.LINK).strip()
 
     try:
         if url:
-            # Re-checked here rather than trusting what is on disk, since the
-            # file is plain text that anything could have written.
-            webcam.remote(validate_camera_url(url), names)
+            # Re-checked rather than trusting what is on disk, since the file is
+            # plain text that anything could have written.
+            source = webcam.remote(validate_camera_url(url), names)
         else:
-            identify.captures(names)
+            source = identify.captures(names)
+
+        # Draw the first frame here so a missing camera is still an error page.
+        source = streaming.primed(source)
     except ValueError as exc:
         return render(request, "start_captures.html", {'error': str(exc)})
-    except Exception:
-        # Previously `except:` returning a fixed "check url name" message, which
-        # hid camera and model failures behind a misleading explanation.
-        logger.exception("Detection run failed.")
+    except StopIteration:
         return render(request, "start_captures.html", {
-            'error': 'Could not start detection. Check the camera, and that '
-                     'the model has been trained.',
+            'error': 'The camera produced no frames.',
+        })
+    except Exception:
+        logger.exception("Detection stream failed to start.")
+        return render(request, "start_captures.html", {
+            'error': 'Could not start detection. Check the camera and the log.',
         })
 
-    return render(request, "model_detection.html")
+    return StreamingHttpResponse(
+        streaming.mjpeg(source), content_type=streaming.CONTENT_TYPE)
 
 
 @login_required

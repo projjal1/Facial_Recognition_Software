@@ -6,4 +6,6 @@ urlpatterns = [
     path('addface/',views.get_face,name='add-face'),
     path('pics/',views.fetch,name='pic'),
     path('addfaceremote/',views.get_face_remote,name='add-face-remote'),
+    path('stream-local/',views.stream_local,name='enrol-stream-local'),
+    path('stream-remote/',views.stream_remote,name='enrol-stream-remote'),
 ]

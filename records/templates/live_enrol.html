@@ -1,0 +1,29 @@
+{%extends 'home.html'%}
+
+{% block content%}
+
+<h1>Capturing your face</h1>
+
+<p>Look at the camera. The counter on the video shows how many images have been
+   saved; capture stops on its own when it has enough.</p>
+
+<!-- The browser consumes the multipart stream directly; no JavaScript needed.
+     The stream ends by itself once enough faces are captured. -->
+{% if remote %}
+<img src="{% url 'enrol-stream-remote' %}" alt="Enrolment feed"
+     style="max-width:100%; border:1px solid #ccc;">
+{% else %}
+<img src="{% url 'enrol-stream-local' %}" alt="Enrolment feed"
+     style="max-width:100%; border:1px solid #ccc;">
+{% endif %}
+
+<br><br>
+
+<a class="btn btn-primary" href="{% url 'reg-face' %}">Done</a>
+
+<br><br>
+<p><b>Note:</b></p>
+<p>Take a close, well-lit shot so the frame is mostly your face.</p>
+<p>Leaving this page early stops the capture and keeps whatever was saved.</p>
+
+{%endblock%}

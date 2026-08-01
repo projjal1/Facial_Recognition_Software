@@ -48,7 +48,7 @@ upload ──┘   (Haar crop)                                   └─► repea
 
 Exact pins are in [requirements.txt](requirements.txt), with the reasoning behind each constraint.
 
-A webcam is required. The recognition window opens on the **machine running the server**, not in the browser — see [Limitations](#limitations).
+A webcam is required, attached to the **machine running the server**. Enrolment and recognition video is streamed into the browser, so the server itself no longer needs a desktop session for those — see [Limitations](#limitations) for the two paths that still do.
 
 ---
 
@@ -124,11 +124,11 @@ The repository ships with **no enrolled data** — no accounts, no face images, 
 > The training step derives each person's numeric label from their folder name, and the recognised name is looked up by that number. Signup now **rejects** any other username rather than creating an account that could never be trained. Gaps in the numbering are fine — labels are matched by number, not by position.
 
 1. **Sign up** as `s1`. A folder `face-files/s1/` is created for the images.
-2. **Register Face** — capture from the server webcam, point at a remote camera URL, or upload a photo. Aim for a close, well-lit shot containing mostly the face. Capture stops after 15 frames, or press `q`.
+2. **Register Face** — capture from the server webcam, point at a remote camera URL, or upload a photo. Aim for a close, well-lit shot containing mostly the face. The live feed appears in the page with a counter, and stops on its own after 15 images.
 3. Repeat for `s2`, `s3`, … as needed.
 4. Sign in as the **superuser** and open **Capture feeds**.
 5. Choose a local or remote source, then **Train Model and Start Capture**. Training reports how many images are still pending.
-6. The camera window opens. Recognised faces are logged after a sustained match; press `q` to stop.
+6. The feed appears in the page. Recognised faces are logged after a sustained match; leave the page or press **Stop detection** to end it and free the camera.
 7. Review entries under **System logs**.
 
 ---
@@ -145,6 +145,7 @@ The repository ships with **no enrolled data** — no accounts, no face images, 
 | `camera.py` | Frame sources — the local webcam and a remote snapshot URL, as generators |
 | `recognition.py` | The recognition loop, shared by both capture paths |
 | `enrolment.py` | The enrolment capture loop, shared by both capture paths |
+| `streaming.py` | Wraps annotated frames as an MJPEG response body for the browser |
 | `recog.py` | Trains the LBPH model into `trainer.yml` |
 | `identify.py`, `webcam.py` | Thin entry points wiring a frame source to `recognition.run` |
 | `start.py`, `remote_start.py` | Thin entry points wiring a frame source to `enrolment.capture` |
@@ -162,7 +163,8 @@ There are no database models — the only table in use is Django's built-in `Use
 
 This is a proof-of-concept from a hackathon, not a hardened deployment. Worth knowing before you rely on it:
 
-- **The camera window opens on the server**, and the HTTP request blocks until the capture loop ends. That makes the app effectively single-user and tied to a desktop session — it will not work as-is behind a headless web server. This is the main thing standing between the project and a real deployment.
+- **The experimental emotion and mask detectors still open a window on the server** and hold the request until it closes. Recognition and enrolment no longer do — they stream to the browser — but those two paths remain desktop-bound.
+- **Only one capture can use the server webcam at a time.** A second attempt is refused with a clear message rather than failing obscurely.
 - **Debug defaults on.** Set `DJANGO_DEBUG=false` and `DJANGO_ALLOWED_HOSTS` before exposing the app anywhere.
 - **Recognition thresholds are uncalibrated.** They are hand-picked numbers that still differ between the local (53) and remote (48) paths, and no false-accept or false-reject rate has ever been measured. Treat the accuracy of this system as unknown rather than good.
 - **Recognition is not identity-aware across a crowd.** The confirm counter is global, so several people in frame at once can produce a log entry for the wrong person.
