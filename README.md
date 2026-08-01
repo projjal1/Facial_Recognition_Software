@@ -42,14 +42,11 @@ upload ──┘   (Haar crop)                                   └─► repea
 
 ## Requirements
 
-- **Python 3.7+**
-- **Django 2.2** — the project was generated against this version
+- **Python 3.7 – 3.9.** Django 2.2 does not run on Python 3.10+, so a newer interpreter will not work without upgrading the project first.
 - **`opencv-contrib-python`** — required, not plain `opencv-python`. The LBPH recogniser lives in `cv2.face`, which ships only in the contrib package.
-- **TensorFlow 2.x** and **imutils** — needed even if you never open the experimental pages, because the URL configuration imports them at startup.
+- **TensorFlow** (below 2.16) and **imutils** — needed even if you never open the experimental pages, because the URL configuration imports them at startup.
 
-```bash
-pip install django==2.2 opencv-contrib-python numpy Pillow requests tensorflow imutils
-```
+Exact pins are in [requirements.txt](requirements.txt), with the reasoning behind each constraint.
 
 A webcam is required. The recognition window opens on the **machine running the server**, not in the browser — see [Limitations](#limitations).
 
@@ -61,11 +58,23 @@ A webcam is required. The recognition window opens on the **machine running the 
 git clone https://github.com/projjal1/Facial_Recognition_Software.git
 ```
 
+Create a virtual environment on a supported interpreter, then install the pinned dependencies:
+
 ```bash
-cd Facial_Recognition_Software && python manage.py migrate
+cd Facial_Recognition_Software && python -m venv venv
 ```
 
-The database is not committed, so `migrate` creates a fresh one. Then create an admin account:
+```bash
+pip install -r requirements.txt
+```
+
+The database is not committed, so create a fresh one:
+
+```bash
+python manage.py migrate
+```
+
+Then create an admin account:
 
 ```bash
 python manage.py createsuperuser

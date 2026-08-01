@@ -1,0 +1,26 @@
+# Requires Python 3.7 - 3.9.
+# Django 2.2 does not support Python 3.10+, and numpy 1.21 is capped at <3.11.
+#
+#   python -m venv venv
+#   venv\Scripts\activate      (Windows)
+#   source venv/bin/activate   (macOS / Linux)
+#   pip install -r requirements.txt
+
+Django==2.2.28
+
+# Must be the contrib build: the LBPH recogniser used by recog.py and identify.py
+# lives in cv2.face, which plain opencv-python does not ship.
+opencv-contrib-python==4.6.0.66
+
+numpy==1.21.6
+Pillow==9.5.0
+requests==2.31.0
+
+# Required by the experimental emotion and mask detectors. chatapp/urls.py imports
+# both apps at startup, so the server will not boot without these installed even
+# if those pages are never opened.
+#
+# Keep TensorFlow below 2.16: emotion/resources/model.py imports
+# tensorflow.python.keras.backend, which was removed by the Keras 3 switch.
+tensorflow==2.11.0
+imutils==0.5.4
