@@ -1,15 +1,27 @@
 #Script to send SMS to phone for uidentified users
 
+import os
 import requests
 
 def alert(x):
+
+    #API key is read from the environment, never stored in the repo
+    api_key=os.environ.get("FAST2SMS_API_KEY")
+
+    if not api_key:
+        print("FAST2SMS_API_KEY is not set - skipping SMS alert.")
+        return
+
+    if not x:
+        print("No alert number configured - skipping SMS alert.")
+        return
 
     url = "https://www.fast2sms.com/dev/bulk"
 
     payload = "sender_id=FSTSMS&message=Unidentified tried to access system&language=english&route=p&numbers="+x
 
     headers = {
-    'authorization': "FAST2SMS_API_KEY_PURGED_FROM_HISTORY",
+    'authorization': api_key,
     'Content-Type': "application/x-www-form-urlencoded",'Cache-Control': "no-cache",}
 
     response = requests.request("POST", url, data=payload, headers=headers)
