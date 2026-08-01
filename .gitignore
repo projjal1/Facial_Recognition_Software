@@ -9,3 +9,6 @@ s*/
 
 # Local database - holds real accounts and password hashes; recreate with `manage.py migrate`
 db.sqlite3
+
+# Local working notes
+enhancements.md
