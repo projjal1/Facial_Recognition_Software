@@ -1,18 +1,16 @@
 #This module captures enrolment images from a remote camera URL
 
 import logging
-import os
-
-from django.conf import settings
 
 import camera
 import enrolment
+import face_store
 
 logger = logging.getLogger(__name__)
 
 
 def record_vid(username, existing, url):
-    folder = os.path.join(settings.BASE_DIR, username)
+    folder = face_store.folder_for(username, create=True)
     # Mirrored to match the local path, so a person sees themselves the same way
     # in both enrolment flows.
     return enrolment.capture(

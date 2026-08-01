@@ -1,12 +1,11 @@
 import logging
 import os
-import re
 
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from PIL import Image
 
+import face_store
 import remote_start
 import start
 from security import validate_camera_url
@@ -15,20 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def _user_folder(username):
-    """Absolute path to the user's image folder, created when absent.
-
-    Raises ValueError for a username the trainer could never read, which also
-    means the value is safe to use as a path component - it cannot contain a
-    separator or a parent reference.
-    """
-    if not re.match(settings.FACE_USERNAME_PATTERN, username):
-        raise ValueError(
-            "Account '%s' cannot enrol faces: the trainer only reads folders "
-            "named s followed by a number." % username)
-
-    path = os.path.join(settings.BASE_DIR, username)
-    os.makedirs(path, exist_ok=True)
-    return path
+    return face_store.folder_for(username, create=True)
 
 
 @login_required

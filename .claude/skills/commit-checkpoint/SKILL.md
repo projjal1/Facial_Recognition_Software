@@ -94,7 +94,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 
 | Path | Why |
 |---|---|
-| `s1/`, `s2/`, … `s<N>/` | Enrolled face images - biometric data of identifiable people |
+| `face-files/` (and legacy `s1/`, `s2/`, …) | Enrolled face images - biometric data of identifiable people |
 | `db.sqlite3` | Real accounts and password hashes |
 | `trainer.yml` | LBPH model derived from the face images |
 | A literal `SECRET_KEY` in `chatapp/settings.py` | Read `DJANGO_SECRET_KEY` from the environment instead |

@@ -20,7 +20,9 @@ import sys
 
 # Paths that must never enter a commit, matched against the repo-relative path.
 FORBIDDEN_PATHS = [
-    (re.compile(r"^s\d+/"), "enrolled face images (biometric data)"),
+    (re.compile(r"^face-files/"), "enrolled face images (biometric data)"),
+    # The layout before images moved under face-files/.
+    (re.compile(r"^s\d+/"), "enrolled face images (biometric data, old layout)"),
     (re.compile(r"^db\.sqlite3$"), "local database (real accounts and password hashes)"),
     (re.compile(r"^trainer\.yml$"), "LBPH model derived from face images"),
 ]

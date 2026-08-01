@@ -4,7 +4,10 @@ __pycache__/
 # LBPH model - derived from enrolled faces, never commit
 trainer.yml
 
-# Enrolled face images (biometric data) - one folder per sN user, created at signup
+# Enrolled face images (biometric data) - one folder per user, created at signup
+face-files/
+
+# Pre-existing layout, before images moved under face-files/
 s[0-9]*/
 
 # Local database - holds real accounts and password hashes; recreate with `manage.py migrate`

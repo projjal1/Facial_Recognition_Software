@@ -1,5 +1,4 @@
 import logging
-import os
 import re
 
 from django.conf import settings
@@ -8,6 +7,7 @@ from django.contrib.auth.models import User
 from django.shortcuts import render
 
 import admin_state
+import face_store
 import identify
 import recog
 import webcam
@@ -34,24 +34,8 @@ def _label_names():
     return names
 
 
-def _enrolled_image_count():
-    """Total images across every face folder.
-
-    Matching on s<number> rather than a leading 's' is what lets static/ and
-    staticfiles/ stop being special cases - they simply do not match.
-    """
-    total = 0
-    for entry in os.listdir(settings.BASE_DIR):
-        if not re.match(settings.FACE_USERNAME_PATTERN, entry):
-            continue
-        folder = os.path.join(settings.BASE_DIR, entry)
-        if os.path.isdir(folder):
-            total += len(os.listdir(folder))
-    return total
-
-
 def _training_status():
-    pending = abs(_enrolled_image_count() - admin_state.read_int(admin_state.TRAINED))
+    pending = abs(face_store.total_images() - admin_state.read_int(admin_state.TRAINED))
     if pending == 0:
         return "All data have been previously trained. You can skip with training process."
     return "You have %d pending data. You should train the model" % pending

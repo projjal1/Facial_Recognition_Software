@@ -181,6 +181,11 @@ FACE_ENROLMENT_FRAMES = int(os.environ.get('FACE_ENROLMENT_FRAMES', 15))
 # signup turns a silent "never trained" failure into an immediate error.
 FACE_USERNAME_PATTERN = r'^s\d+$'
 
+# Enrolled images live one folder per person under here. Keeping them together
+# means a single ignore rule covers all biometric data, instead of relying on a
+# pattern that has to match folders scattered across the project root.
+FACE_IMAGE_ROOT = os.path.join(BASE_DIR, os.environ.get('FACE_IMAGE_ROOT', 'face-files'))
+
 # Optional strict allowlist of camera hosts. Empty means fall back to the
 # scheme/loopback/link-local checks in security.validate_camera_url.
 CAMERA_URL_ALLOWED_HOSTS = [

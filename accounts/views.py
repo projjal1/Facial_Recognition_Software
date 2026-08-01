@@ -1,5 +1,4 @@
 import logging
-import os
 import re
 
 from django.conf import settings
@@ -9,20 +8,13 @@ from django.contrib.auth.models import User
 from django.shortcuts import redirect, render
 
 import admin_state
+import face_store
 
 logger = logging.getLogger(__name__)
 
 # The navbar hides the admin links, but hiding a link is not access control -
 # the URLs answered to anyone before this was added.
 superuser_required = user_passes_test(lambda user: user.is_superuser)
-
-
-def _image_count(username):
-    """How many enrolled images the user has, tolerating a missing folder."""
-    try:
-        return len(os.listdir(os.path.join(settings.BASE_DIR, username)))
-    except FileNotFoundError:
-        return 0
 
 
 def base(request):
@@ -88,7 +80,7 @@ def signup(request):
 
     # Previously os.system("mkdir " + username), which handed an unvalidated
     # POST field to the shell.
-    os.makedirs(os.path.join(settings.BASE_DIR, username), exist_ok=True)
+    face_store.folder_for(username, create=True)
     logger.info("Created account and image folder for %s.", username)
 
     return redirect("home")
@@ -129,5 +121,5 @@ def about(request):
     return render(request, 'about.html', {
         'fn': request.user.first_name,
         'ln': request.user.last_name,
-        'record': _image_count(username),
+        'record': face_store.image_count(username),
     })

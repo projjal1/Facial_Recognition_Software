@@ -74,12 +74,12 @@ Because `chatapp/urls.py` includes `emotion.urls` and `mask.urls`, whose views i
 The whole recognition pipeline hinges on an implicit naming contract:
 
 1. `accounts.views.signup` runs `os.system("mkdir " + username)`, creating a top-level directory named after the user.
-2. `recog.py::getImagesAndLabels` scans top-level dirs, **skipping any not starting with `s`** and skipping the `st*`/`sm*` prefixes (this is how `static/` and `staticfiles/` are excluded). The LBPH label is `int(dirname[1:])` — so folders must be `s1`, `s2`, … and a user named anything else is silently never trained.
+2. `face_store.enrolled_folders()` scans `face-files/` and yields `(label, path)`, where the label is `int(dirname[1:])` — so folders must be `s1`, `s2`, … Signup rejects anything else, so an account that could never be trained can no longer be created.
 3. `feeds.views.start` builds `subjects = ['UNKNOWN'] + [usernames starting with 's', in DB order]` and recognition does `names[id]`.
 
 Consequence: the displayed name is correct only while `s1..sN` exist contiguously and in `auth_user` id order. Deleting a user, or a non-`sN` username beginning with `s`, silently shifts every label. Any new top-level directory starting with `s` (other than `st*`/`sm*`) will be picked up as face data.
 
-**Current state: the repo ships with no enrolled data at all.** No users in the DB, no `s*/` image folders, no `trainer.yml`. Recognition cannot run until someone signs up as `s1`, enrols images, and trains. `identify.py`/`webcam.py` will fail at `recognizer.read('trainer.yml')` until a model exists — train via the feeds panel first. `s[0-9]*/` is now gitignored, so re-enrolled faces will not be committed back.
+**Current state: the repo ships with no enrolled data at all.** No users in the DB, no `face-files/`, no `trainer.yml`. Recognition cannot run until someone signs up as `s1`, enrols images, and trains; `recognition.py` raises a clear `ValueError` until a model exists. Images now live in `face-files/<username>/` rather than in folders at the project root, and `face-files/` is gitignored in full, so re-enrolled faces cannot be committed back.
 
 ### Flat-file state (`admin_files/`)
 

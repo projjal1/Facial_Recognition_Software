@@ -2,14 +2,13 @@
 
 import logging
 import os
-import re
 
 import cv2
 import numpy as np
-from django.conf import settings
 from PIL import Image
 
 import admin_state
+import face_store
 
 logger = logging.getLogger(__name__)
 
@@ -17,28 +16,12 @@ CASCADE_PATH = 'haarcascade_frontalface_default.xml'
 MODEL_PATH = 'trainer.yml'
 
 
-def _face_folders():
-    """Every enrolled person's folder, as (label, path) pairs.
-
-    Matching on s<number> is what lets static/ and staticfiles/ stop being
-    special cases. The previous version skipped them with startswith('st') and
-    startswith('sm') tests, which would also have silently skipped a
-    legitimately named folder had one ever started with those letters.
-    """
-    for entry in sorted(os.listdir(settings.BASE_DIR)):
-        if not re.match(settings.FACE_USERNAME_PATTERN, entry):
-            continue
-        path = os.path.join(settings.BASE_DIR, entry)
-        if os.path.isdir(path):
-            yield int(entry[1:]), path
-
-
 def getImagesAndLabels(detector):
     face_samples = []
     ids = []
     images_read = 0
 
-    for label, folder in _face_folders():
+    for label, folder in face_store.enrolled_folders():
         for image_name in os.listdir(folder):
             image_path = os.path.join(folder, image_name)
             images_read += 1

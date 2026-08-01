@@ -30,7 +30,7 @@ Both are reachable from the navbar and run independently of the recognition pipe
 enrol            train                    recognise
 ─────            ─────                    ─────────
 webcam ──┐
-remote ──┼─► s<N>/*.jpg ─► LBPH ─► trainer.yml ─► predict ─┬─► confidence OK  ─► entry log
+remote ──┼─► face-files/  ─► LBPH ─► trainer.yml ─► predict ─┬─► confidence OK  ─► entry log
 upload ──┘   (Haar crop)                                   └─► repeated fail  ─► SMS alert
 ```
 
@@ -123,7 +123,7 @@ The repository ships with **no enrolled data** — no accounts, no face images, 
 > **Usernames must be `s1`, `s2`, `s3`, …**
 > The training step derives each person's numeric label from their folder name, and the recognised name is looked up by that number. Signup now **rejects** any other username rather than creating an account that could never be trained. Gaps in the numbering are fine — labels are matched by number, not by position.
 
-1. **Sign up** as `s1`. A folder named `s1/` is created for the images.
+1. **Sign up** as `s1`. A folder `face-files/s1/` is created for the images.
 2. **Register Face** — capture from the server webcam, point at a remote camera URL, or upload a photo. Aim for a close, well-lit shot containing mostly the face. Capture stops after 15 frames, or press `q`.
 3. Repeat for `s2`, `s3`, … as needed.
 4. Sign in as the **superuser** and open **Capture feeds**.
@@ -148,6 +148,7 @@ The repository ships with **no enrolled data** — no accounts, no face images, 
 | `recog.py` | Trains the LBPH model into `trainer.yml` |
 | `identify.py`, `webcam.py` | Thin entry points wiring a frame source to `recognition.run` |
 | `start.py`, `remote_start.py` | Thin entry points wiring a frame source to `enrolment.capture` |
+| `face_store.py` | Resolves and scans the per-person folders under `face-files/` |
 | `admin_state.py` | Reads and writes the flat-file state under `admin_files/` |
 | `security.py` | Validates operator-supplied camera URLs |
 | `alerts.py` | Sends the SMS alert |
@@ -175,7 +176,7 @@ This is a proof-of-concept from a hackathon, not a hardened deployment. Worth kn
 
 Face images are biometric data. This repository intentionally contains none:
 
-- Enrolled images (`s<N>/`), the trained `trainer.yml`, and `db.sqlite3` are all git-ignored.
+- Enrolled images live under `face-files/`, which is git-ignored in full — as are the trained `trainer.yml` and `db.sqlite3`. One rule covers every person, so adding someone new cannot accidentally commit their face.
 - Alert phone numbers and API keys are read from the environment or entered in the UI — never committed.
 
 If you fork or deploy this, keep it that way, and get consent from anyone you enrol.
