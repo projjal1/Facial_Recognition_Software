@@ -123,7 +123,8 @@ Consequence: the displayed name is correct only while `s1..sN` exist contiguousl
 | `logs.txt` | `identify.py` / `webcam.py` append `<name> logged at <timestamp>` | `accounts.views.logs` (POST clears it) |
 | `mobile_no.txt` | `accounts.views.profile` | `identify.py` / `webcam.py` → passed to `alerts.alert()`. Intentionally left empty in the repo — it held a real phone number; set it through the alert-settings page, don't commit a value back. |
 | `link.txt` | `feeds.views.init_url` (remote) / `init_server` (writes empty = use local webcam) | `feeds.views.start` to pick local vs remote source |
-| `trained.txt` | `recog.py` writes the image count at end of training | `feeds.views.get_files_untrained` diffs it against the current count to report "pending data" |
+| `trained.txt` | `recog.py` writes the image count at end of training | `feeds.views._training_status` diffs it against the current count to report "pending data" |
+| `trained.json` | `recog.py` writes the filenames that went into the model, per label | `recog.begin()` diffs it to decide what is new. A count cannot serve here: the camera writes `12.jpg` and uploads write `img3.jpg`, so no ordering separates old from new |
 
 All four files are currently empty, which every reader handles: empty `trained.txt` parses as `0`, empty `link.txt` selects the local-webcam path.
 
@@ -138,6 +139,10 @@ Detection is the SSD from `mask/resources/` (vendored for the mask app, reused h
 `tracking.py` associates detections across frames by centroid distance. Each frame casts one vote per tracked face, and `recognition.py` acts on the most-voted identity — which is why two people in view no longer share one counter.
 
 All tuning lives in `settings.py` (`FACE_*`). The confidence thresholds are placeholders: run `manage.py evaluate_recognition` against real enrolled data and set them from its table.
+
+**Training is incremental.** `recog.begin()` appends only what `trained.json` says is new, because people enrol one at a time and rebuilding from every image makes each new person cost more than the last. It falls back to a full pass when there is no model, no manifest, or when previously trained images have been deleted — LBPH can be appended to but never subtracted from, so anything subtractive means starting over. `begin(full=True)` forces it, and the training page has a checkbox; use it after changing anything in the crop pipeline, since existing images no longer match what recognition produces.
+
+**Enrolment refuses a face that is already on file.** `enrolment._IdentityCheck` predicts the first few crops against the trained model and stops the run if a majority match a *different* label within `FACE_DUPLICATE_THRESHOLD`. Nothing is written until that settles — crops are held in memory — so a refused run leaves no trace. One person enrolled under two names splits their images across two classes and is close to undiagnosable later.
 
 ### Templates
 

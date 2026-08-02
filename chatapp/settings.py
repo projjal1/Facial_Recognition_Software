@@ -186,6 +186,14 @@ FACE_MIN_SIZE = int(os.environ.get('FACE_MIN_SIZE', 80))
 FACE_CROP_SIZE = int(os.environ.get('FACE_CROP_SIZE', 128))
 FACE_BLUR_THRESHOLD = float(os.environ.get('FACE_BLUR_THRESHOLD', 40))
 
+# Enrolling someone who is already on file poisons both of their classes, so the
+# first few crops of a run are checked against the trained model before anything
+# is written. The distance is deliberately tighter than the recognition
+# threshold: refusing a legitimate enrolment is worse than missing a duplicate,
+# which training will surface anyway.
+FACE_DUPLICATE_THRESHOLD = int(os.environ.get('FACE_DUPLICATE_THRESHOLD', 45))
+FACE_DUPLICATE_CHECK_FRAMES = int(os.environ.get('FACE_DUPLICATE_CHECK_FRAMES', 5))
+
 # Associating detections across frames, so votes accumulate per person rather
 # than in one counter shared by everyone in view.
 FACE_TRACK_MAX_DISTANCE = int(os.environ.get('FACE_TRACK_MAX_DISTANCE', 120))

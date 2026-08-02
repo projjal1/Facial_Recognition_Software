@@ -18,7 +18,13 @@
 <form method="POST" action="{%url 'train' %}">
     {%csrf_token%}
         <input onclick="start_train()" class="btn btn-primary" type="submit" value="Train the model!" />
-    
+        <br><br>
+        <label>
+            <input type="checkbox" name="full">
+            Rebuild from scratch
+        </label>
+        <p>Training normally adds only what is new. Rebuild after deleting
+           images, or after the capture settings change.</p>
 </form>
 
 <br>

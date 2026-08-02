@@ -15,4 +15,5 @@ def record_vid(username, existing, url):
     # Mirrored to match the local path, so a person sees themselves the same way
     # in both enrolment flows.
     return enrolment.capture(
-        camera.remote_frames(url, flip=True), folder, existing)
+        camera.remote_frames(url, flip=True), folder, existing,
+        label=face_store.label_for(username))

@@ -145,8 +145,13 @@ def end(request):
 @login_required
 @superuser_required
 def train(request):
+    # Incremental by default, since people enrol one at a time. A rebuild is
+    # needed after the stored crop format changes, or after images are deleted -
+    # LBPH cannot forget, so anything subtractive means starting over.
+    full = request.POST.get('full') == 'on'
+
     try:
-        recog.begin()
+        recog.begin(full=full)
     except ValueError as exc:
         return render(request, "model_detection.html", {'msg': str(exc)})
     except Exception:

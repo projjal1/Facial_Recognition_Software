@@ -42,6 +42,12 @@ def folder_for(username, create=False):
     return path
 
 
+def label_for(username):
+    """The numeric label a username owns, validating the name on the way."""
+    folder_for(username)
+    return int(username[1:])
+
+
 def enrolled_folders():
     """Yield (label, path) for every enrolled person, ordered by label.
 

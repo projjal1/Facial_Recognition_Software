@@ -10,7 +10,8 @@ Originally produced as a proof-of-work solution in a hackathon, and implemented 
 
 - User registration and profile management, with every view behind a sign-in and the admin pages behind a superuser check
 - Face enrolment from the server webcam, a remote camera URL, or a file upload
-- Train the recognition model on demand, from the browser
+- Train the recognition model on demand, from the browser — adding only what is new, with a rebuild option
+- Enrolment refuses a face that is already registered under another name
 - Live recognition with automatic entry logging
 - SMS alert when an unrecognised face keeps appearing
 - Admin control over the entire portal, with full data transparency
@@ -127,7 +128,7 @@ The repository ships with **no enrolled data** — no accounts, no face images, 
 2. **Register Face** — capture from the server webcam, point at a remote camera URL, or upload a photo. Aim for a close, well-lit shot containing mostly the face. The live feed appears in the page with a counter, and stops on its own after 15 images.
 3. Repeat for `s2`, `s3`, … as needed.
 4. Sign in as the **superuser** and open **Capture feeds**.
-5. Choose a local or remote source, then **Train Model and Start Capture**. Training reports how many images are still pending.
+5. Choose a local or remote source, then **Train Model and Start Capture**. Training reports how many images are still pending, and adds only what is new — tick **Rebuild from scratch** after deleting images or changing the capture settings.
 6. The feed appears in the page. Recognised faces are logged after a sustained match; leave the page or press **Stop detection** to end it and free the camera.
 7. Review entries under **System logs**.
 
