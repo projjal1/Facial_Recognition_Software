@@ -23,6 +23,12 @@ python manage.py createsuperuser
 ```
 
 ```bash
+python manage.py evaluate_recognition
+```
+
+Holds out part of each person's images, trains in memory (never touching `trainer.yml`), and prints correct/wrong/rejected rates across a range of confidence thresholds. Needs at least two enrolled people.
+
+```bash
 python manage.py test
 ```
 
@@ -123,9 +129,15 @@ All four files are currently empty, which every reader handles: empty `trained.t
 
 `trainer.yml` (~50 MB LBPH model) is regenerated wholesale by `recog.begin()` and is gitignored — it is derived from face images, so keep it out of commits.
 
-### Recognition tuning constants
+### The CV pipeline
 
-Duplicated between `identify.py` (local) and `webcam.py` (remote) and deliberately different: confidence threshold `< 53` local vs `< 48` remote; 60 consecutive valid frames → write a log line and `sleep(3)`; 150 invalid frames → `alerts.alert()` SMS. Changing behavior usually means editing both files.
+`faces.py` owns detection and crop normalisation and **both halves of the pipeline go through it** — enrolment, uploads, and recognition. That is deliberate: LBPH compares histograms of local texture, so enrolling at one scale and matching at another degrades accuracy in a way that reads as a bad threshold rather than a preprocessing mismatch. If you change the transform, everyone must re-enrol and the model must be retrained.
+
+Detection is the SSD from `mask/resources/` (vendored for the mask app, reused here), not the Haar cascade the project started with. Stored images are already normalised crops, so `recog.py` does no detection at training time.
+
+`tracking.py` associates detections across frames by centroid distance. Each frame casts one vote per tracked face, and `recognition.py` acts on the most-voted identity — which is why two people in view no longer share one counter.
+
+All tuning lives in `settings.py` (`FACE_*`). The confidence thresholds are placeholders: run `manage.py evaluate_recognition` against real enrolled data and set them from its table.
 
 ### Templates
 

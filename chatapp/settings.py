@@ -172,8 +172,24 @@ MEDIA_URL='/media/'
 # are uncalibrated guesses - deriving them from a false-accept/false-reject
 # sweep is a separate piece of work.
 
-FACE_CONFIDENCE_THRESHOLD_LOCAL = int(os.environ.get('FACE_CONFIDENCE_THRESHOLD_LOCAL', 53))
-FACE_CONFIDENCE_THRESHOLD_REMOTE = int(os.environ.get('FACE_CONFIDENCE_THRESHOLD_REMOTE', 48))
+# NOTE: these are uncalibrated, and the preprocessing change to fixed-size
+# CLAHE crops moved the distance scale they were guessed against. Run
+# `manage.py evaluate_recognition` once real people are enrolled and set them
+# from the false-accept/false-reject table it prints.
+FACE_CONFIDENCE_THRESHOLD_LOCAL = int(os.environ.get('FACE_CONFIDENCE_THRESHOLD_LOCAL', 70))
+FACE_CONFIDENCE_THRESHOLD_REMOTE = int(os.environ.get('FACE_CONFIDENCE_THRESHOLD_REMOTE', 70))
+
+# Detection and crop normalisation. Both halves of the pipeline read these, so
+# enrolment and recognition cannot drift apart.
+FACE_DETECTOR_CONFIDENCE = float(os.environ.get('FACE_DETECTOR_CONFIDENCE', 0.5))
+FACE_MIN_SIZE = int(os.environ.get('FACE_MIN_SIZE', 80))
+FACE_CROP_SIZE = int(os.environ.get('FACE_CROP_SIZE', 128))
+FACE_BLUR_THRESHOLD = float(os.environ.get('FACE_BLUR_THRESHOLD', 40))
+
+# Associating detections across frames, so votes accumulate per person rather
+# than in one counter shared by everyone in view.
+FACE_TRACK_MAX_DISTANCE = int(os.environ.get('FACE_TRACK_MAX_DISTANCE', 120))
+FACE_TRACK_MAX_MISSES = int(os.environ.get('FACE_TRACK_MAX_MISSES', 15))
 
 # Consecutive confident frames before an entry is logged, and consecutive
 # failures before an alert is sent.

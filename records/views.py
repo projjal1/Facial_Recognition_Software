@@ -1,12 +1,15 @@
 import logging
 import os
 
+import cv2
+import numpy as np
 from django.contrib.auth.decorators import login_required
 from django.http import StreamingHttpResponse
 from django.shortcuts import render
 from PIL import Image
 
 import face_store
+import faces
 import remote_start
 import start
 import streaming
@@ -113,15 +116,35 @@ def fetch(request):
     if upload is None:
         return render(request, 'page2.html', {'msg': 'No image was selected.'})
 
-    destination = os.path.join(folder, "img%d.jpg" % (len(os.listdir(folder)) + 1))
-
     try:
-        # Convert first: a PNG with transparency cannot be written as JPEG.
-        Image.open(upload).convert('RGB').save(destination)
+        # Pillow decodes more formats than cv2.imdecode, which matters for
+        # whatever a phone camera produces; convert to BGR for the rest.
+        image = Image.open(upload).convert('RGB')
     except OSError:
         logger.exception("Upload from %s could not be decoded.", username)
         return render(request, 'page2.html', {
             'msg': 'That file could not be read as an image.',
         })
+
+    frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+    # Store the same normalised crop the webcam paths store, rather than the
+    # whole photo. Keeping every stored image in one form is what lets training
+    # skip detection entirely and guarantees enrolment matches recognition.
+    detected = list(faces.crops(frame))
+    if not detected:
+        return render(request, 'page2.html', {
+            'msg': 'No face was found in that image. Take a closer photo, '
+                   'well lit, with the face filling most of the frame.',
+        })
+
+    _box, crop = detected[0]
+    if not faces.is_sharp(crop):
+        return render(request, 'page2.html', {
+            'msg': 'That photo is too blurred to enrol. Try a sharper one.',
+        })
+
+    destination = os.path.join(folder, "img%d.jpg" % (len(os.listdir(folder)) + 1))
+    cv2.imwrite(destination, crop)
 
     return render(request, 'page2.html', {'msg': 'Got your image uploaded'})

@@ -1,15 +1,12 @@
 """The recognition loop shared by the local and remote capture paths.
 
-identify.py and webcam.py differ only in where frames come from, but each used
-to carry its own near-identical copy of this logic. That is how their
-confidence thresholds drifted apart - 53 in one, 48 in the other - with no
-record of why.
+Frames are yielded rather than drawn, so the same logic feeds an HTTP response
+instead of a window on the server.
 
-This yields annotated frames rather than drawing them itself. Owning a window
-tied the whole feature to a desktop session on the server; handing frames back
-lets the caller decide, which is what allows an HTTP response to carry the
-video. When the consumer stops - a browser tab closing - this generator is
-closed and the frame source releases the camera on its way out.
+Identity is decided per tracked face. Each frame casts one vote for what that
+track looks like, and an entry is written when one identity has enough votes -
+not when a global counter reaches a number, which is how a crowd used to
+produce a log entry naming whoever was in the final frame.
 """
 
 import datetime
@@ -22,26 +19,28 @@ from django.conf import settings
 
 import admin_state
 import alerts
+import faces
+import tracking
 
 logger = logging.getLogger(__name__)
 
-CASCADE_PATH = 'haarcascade_frontalface_default.xml'
 MODEL_PATH = 'trainer.yml'
 
-# After logging someone, wait this long before logging them again. Previously a
-# time.sleep, which now would freeze the video for everyone watching; tracking a
-# deadline instead keeps the stream moving.
+# After logging someone, wait this long before logging them again. Tracked per
+# face rather than globally, so one person being logged does not mute another.
 LOG_COOLDOWN_SECONDS = 3
 
 
-def _load_recognizer():
+def _load_recognizer(threshold):
     if not os.path.exists(MODEL_PATH):
-        # ValueError so the view can show this text to the operator directly,
-        # rather than the generic failure message.
+        # ValueError so the view can show this text to the operator directly.
         raise ValueError(
             "No trained model found. Train the model before starting detection.")
 
-    recognizer = cv2.face.LBPHFaceRecognizer_create()
+    # With a threshold set, predict() returns -1 rather than the nearest label
+    # when nothing is close enough. That is what makes "not recognised" a real
+    # answer instead of something inferred from the distance afterwards.
+    recognizer = cv2.face.LBPHFaceRecognizer_create(threshold=threshold)
     recognizer.read(MODEL_PATH)
     return recognizer
 
@@ -64,57 +63,52 @@ def _send_alert(number):
 def frames(source, names, threshold):
     """Yield annotated frames, logging entries and raising alerts as it goes.
 
-    `names` maps an LBPH label to a username. A label that is not in the map is
-    treated as unrecognised rather than logged under someone else's name.
+    `names` maps an LBPH label to a username. An unknown label - including the
+    -1 the recogniser returns when nothing is close enough - counts as a vote
+    for "not recognised" rather than being attributed to someone.
     """
-    recognizer = _load_recognizer()
-    cascade = cv2.CascadeClassifier(CASCADE_PATH)
+    recognizer = _load_recognizer(threshold)
+    tracker = tracking.Tracker()
     font = cv2.FONT_HERSHEY_SIMPLEX
 
     alert_number = admin_state.read(admin_state.MOBILE_NO).strip()
-    frames_to_log = settings.FACE_FRAMES_TO_LOG
-    frames_to_alert = settings.FACE_FRAMES_TO_ALERT
-
-    valid = 0
-    invalid = 0
-    cooldown_until = 0.0
+    votes_to_log = settings.FACE_FRAMES_TO_LOG
+    votes_to_alert = settings.FACE_FRAMES_TO_ALERT
 
     for img in source:
         if img is None:
             continue
 
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        faces = cascade.detectMultiScale(
-            gray, scaleFactor=1.2, minNeighbors=3, minSize=(10, 10))
+        detections = list(faces.crops(img))
+        boxes = [box for box, _ in detections]
 
-        for (x, y, w, h) in faces:
-            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
-            label, confidence = recognizer.predict(gray[y:y + h, x:x + w])
-            name = names.get(label)
+        for (track, box), (_, crop) in zip(tracker.update(boxes), detections):
+            label, _confidence = recognizer.predict(crop)
+            track.record(names.get(label))
 
-            if confidence < threshold and name:
-                valid += 1
-                if valid < frames_to_log:
-                    caption = "Detected " + name
-                elif time.monotonic() < cooldown_until:
-                    caption = "Logged - waiting before logging again"
-                else:
-                    _log_entry(name)
-                    cooldown_until = time.monotonic() + LOG_COOLDOWN_SECONDS
-                    valid = 0
-                    invalid = 0
+            leader, count = track.leader()
+            now = time.monotonic()
+
+            if leader is not None and count >= votes_to_log:
+                if now >= track.cooldown_until:
+                    _log_entry(leader)
+                    track.cooldown_until = now + LOG_COOLDOWN_SECONDS
                     caption = "Logged to system"
-            else:
-                invalid += 1
-                if invalid >= frames_to_alert:
-                    _send_alert(alert_number)
-                    valid = 0
-                    invalid = 0
-                    caption = "Unrecognised face - system alerted"
                 else:
-                    caption = "Detecting.."
+                    caption = "Logged - waiting before logging again"
+                track.reset()
+            elif leader is None and count >= votes_to_alert:
+                _send_alert(alert_number)
+                track.reset()
+                caption = "Unrecognised face - system alerted"
+            elif leader is None:
+                caption = "Detecting.."
+            else:
+                caption = "Detected " + leader
 
-            cv2.putText(img, caption, (x + 5, y - 5), font, 1,
+            x, y, w, h = box
+            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
+            cv2.putText(img, caption, (x + 5, y - 5), font, 0.7,
                         (255, 255, 255), 2)
 
         yield img

@@ -27,16 +27,16 @@ Both are reachable from the navbar and run independently of the recognition pipe
 ## How it works
 
 ```
-enrol            train                    recognise
-─────            ─────                    ─────────
+enrol             train                     recognise
+─────             ─────                     ─────────
 webcam ──┐
-remote ──┼─► face-files/  ─► LBPH ─► trainer.yml ─► predict ─┬─► confidence OK  ─► entry log
-upload ──┘   (Haar crop)                                   └─► repeated fail  ─► SMS alert
+remote ──┼─► face-files/ ─► LBPH ─► trainer.yml ─► predict ─┬─► votes for a person ─► entry log
+upload ──┘  (SSD + CLAHE)                                   └─► votes for nobody   ─► SMS alert
 ```
 
-1. **Enrol** — `haarcascade_frontalface_default.xml` detects the face in each frame and the greyscale crop is saved into a folder named after the user.
-2. **Train** — every enrolled image is fed to OpenCV's LBPH recogniser, producing `trainer.yml`.
-3. **Recognise** — each frame is matched against the model. Sustained confident matches write a line to the entry log; sustained failures fire an alert.
+1. **Enrol** — an SSD face detector finds the face, and `faces.py` stores a fixed-size, contrast-equalised grey crop. Blurred crops are rejected rather than saved.
+2. **Train** — the stored crops go straight to OpenCV's LBPH recogniser, producing `trainer.yml`. Nothing is re-detected, because every stored image is already a normalised crop.
+3. **Recognise** — each frame runs the same detection and normalisation, so what is matched looks like what was enrolled. Faces are tracked between frames and each frame casts one vote, so several people in view are counted separately.
 
 ---
 
@@ -142,6 +142,8 @@ The repository ships with **no enrolled data** — no accounts, no face images, 
 | `records/` | Face enrolment (webcam, remote URL, upload) |
 | `feeds/` | Superuser panel: train the model and run recognition |
 | `emotion/`, `mask/` | Experimental detectors with their own bundled models |
+| `faces.py` | Face detection and crop normalisation, shared by enrolment and recognition |
+| `tracking.py` | Follows each face between frames so votes accumulate per person |
 | `camera.py` | Frame sources — the local webcam and a remote snapshot URL, as generators |
 | `recognition.py` | The recognition loop, shared by both capture paths |
 | `enrolment.py` | The enrolment capture loop, shared by both capture paths |
@@ -166,8 +168,8 @@ This is a proof-of-concept from a hackathon, not a hardened deployment. Worth kn
 - **Only one capture can use the server webcam at a time.** A second attempt is refused with a clear message rather than failing obscurely.
 - **The bundled emotion and mask models are Keras 2 artifacts**, loaded through the `tf-keras` compatibility package. That package is maintained but frozen, so the models should eventually be re-saved in the current format.
 - **Debug defaults on.** Set `DJANGO_DEBUG=false` and `DJANGO_ALLOWED_HOSTS` before exposing the app anywhere.
-- **Recognition thresholds are uncalibrated.** They are hand-picked numbers that still differ between the local (53) and remote (48) paths, and no false-accept or false-reject rate has ever been measured. Treat the accuracy of this system as unknown rather than good.
-- **Recognition is not identity-aware across a crowd.** The confirm counter is global, so several people in frame at once can produce a log entry for the wrong person.
+- **Recognition thresholds are uncalibrated** until you run `manage.py evaluate_recognition` against your own enrolled people. The defaults are placeholders, not measured values — treat accuracy as unknown until you have the table that command prints.
+- **Faces are not aligned by eye position.** Crops are size- and contrast-normalised but not rotated, so a tilted head matches less well than it could.
 - **There is no liveness check** — a printed photo will pass.
 - LBPH training runs on the CPU; a discrete GPU only helps the experimental TensorFlow detectors.
 - The test suite covers access control, validation and the streaming plumbing, but **not recognition accuracy** — no model is trained during tests, and no false-accept or false-reject rate has ever been measured.
@@ -187,7 +189,7 @@ If you fork or deploy this, keep it that way, and get consent from anyone you en
 
 ## Concepts explored
 
-- Haar feature-based cascade classifiers
+- SSD-based face detection, and the Haar cascades it replaced
 - LBPH (Local Binary Patterns Histograms) face recogniser
 - Image colour enhancement and toning
 

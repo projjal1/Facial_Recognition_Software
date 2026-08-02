@@ -62,22 +62,48 @@ class AccessControlTests(TestCase):
                 self.assertIn(reverse('login'), response.url)
 
 
+def sharp_crop():
+    """Noise, so the variance-of-Laplacian sharpness check passes."""
+    size = 128
+    rng = np.random.default_rng(0)
+    return rng.integers(0, 255, (size, size), dtype=np.uint8)
+
+
+def blurred_crop():
+    return np.zeros((128, 128), dtype=np.uint8)
+
+
+def found(crop):
+    """Stand in for face detection, which no synthetic image will satisfy."""
+    return lambda frame: [((0, 0, 128, 128), crop)]
+
+
 class UploadTests(EnrolmentTestCase):
 
-    def test_saves_an_uploaded_image(self):
-        self.client.post(reverse('pic'), {'id_image': png_upload()})
+    def test_stores_the_detected_crop(self):
+        with mock.patch('faces.crops', found(sharp_crop())):
+            self.client.post(reverse('pic'), {'id_image': png_upload()})
         self.assertEqual(face_store.image_count('s1'), 1)
 
-    def test_converts_transparency_rather_than_failing(self):
-        # A PNG with an alpha channel cannot be written as JPEG directly.
-        response = self.client.post(reverse('pic'), {'id_image': png_upload()})
-        self.assertContains(response, 'uploaded')
-
     def test_numbers_uploads_after_the_existing_ones(self):
-        self.client.post(reverse('pic'), {'id_image': png_upload()})
-        self.client.post(reverse('pic'), {'id_image': png_upload()})
+        with mock.patch('faces.crops', found(sharp_crop())):
+            self.client.post(reverse('pic'), {'id_image': png_upload()})
+            self.client.post(reverse('pic'), {'id_image': png_upload()})
         names = sorted(os.listdir(face_store.folder_for('s1')))
         self.assertEqual(names, ['img1.jpg', 'img2.jpg'])
+
+    def test_reports_a_photo_with_no_face_in_it(self):
+        # Storing the whole photo would leave training with something that is
+        # not a face crop, which is what the pipeline used to do.
+        response = self.client.post(reverse('pic'), {'id_image': png_upload()})
+        self.assertContains(response, 'No face was found')
+        self.assertEqual(face_store.image_count('s1'), 0)
+
+    def test_rejects_a_blurred_photo(self):
+        with mock.patch('faces.crops', found(blurred_crop())):
+            response = self.client.post(reverse('pic'), {'id_image': png_upload()})
+        self.assertContains(response, 'too blurred')
+        self.assertEqual(face_store.image_count('s1'), 0)
 
     def test_reports_a_file_that_is_not_an_image(self):
         bad = SimpleUploadedFile('notes.jpg', b'this is not an image',

@@ -1,13 +1,11 @@
-"""Shared enrolment capture: save cropped faces until the target count is met.
+"""Shared enrolment capture: save normalised face crops until the target is met.
 
-start.py and remote_start.py previously held separate copies of this, which is
-why only one of them cleaned up after itself and only one stopped cleanly at the
-frame limit.
+What gets written is the same fixed-size, contrast-equalised crop that
+recognition will later match against, produced by the same code in faces.py.
+Storing raw frames and normalising later is how the two halves drift apart.
 
-Like the recognition loop, this yields annotated frames instead of drawing them,
-so the same code can feed a video stream in the browser. It finishes on its own
-once enough faces are captured, which is what ends the stream and tells the
-viewer the run is over.
+Blurred crops are rejected rather than counted. Fifteen smeared images teach the
+model a smeared version of someone, and cost more accuracy than they add.
 """
 
 import logging
@@ -16,22 +14,21 @@ import os
 import cv2
 from django.conf import settings
 
-logger = logging.getLogger(__name__)
+import faces
 
-CASCADE_PATH = 'haarcascade_frontalface_default.xml'
+logger = logging.getLogger(__name__)
 
 
 def capture(source, folder, existing):
-    """Yield annotated frames while saving face crops into `folder`.
+    """Yield annotated frames while saving normalised crops into `folder`.
 
     Images are numbered after `existing` so a second run adds to the set rather
-    than overwriting it. Stops once settings.FACE_ENROLMENT_FRAMES faces have
-    been saved.
+    than overwriting it. Stops once settings.FACE_ENROLMENT_FRAMES are saved.
     """
-    detector = cv2.CascadeClassifier(CASCADE_PATH)
     font = cv2.FONT_HERSHEY_SIMPLEX
     target = settings.FACE_ENROLMENT_FRAMES
     saved = 0
+    skipped = 0
 
     os.makedirs(folder, exist_ok=True)
 
@@ -39,22 +36,28 @@ def capture(source, folder, existing):
         if img is None:
             continue
 
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        faces = detector.detectMultiScale(gray, 1.2, 3)
+        for box, crop in faces.crops(img):
+            x, y, w, h = box
 
-        for (x, y, w, h) in faces:
-            cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+            if not faces.is_sharp(crop):
+                skipped += 1
+                cv2.rectangle(img, (x, y), (x + w, y + h), (0, 140, 255), 2)
+                cv2.putText(img, "Too blurred - hold still", (x + 5, y - 5),
+                            font, 0.6, (255, 255, 255), 2)
+                continue
+
             saved += 1
-            cv2.imwrite(
-                os.path.join(folder, "%d.jpg" % (existing + saved)),
-                gray[y:y + h, x:x + w])
+            cv2.imwrite(os.path.join(folder, "%d.jpg" % (existing + saved)), crop)
+            cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
             if saved >= target:
                 break
 
         cv2.putText(img, "Captured %d of %d" % (saved, target), (10, 30),
-                    font, 1, (255, 255, 255), 2)
+                    font, 0.8, (255, 255, 255), 2)
         yield img
 
         if saved >= target:
-            logger.info("Saved %d enrolment images to %s.", saved, folder)
+            logger.info("Saved %d crops to %s (%d rejected as blurred).",
+                        saved, folder, skipped)
             return
