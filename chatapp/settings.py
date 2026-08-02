@@ -191,6 +191,22 @@ FACE_BLUR_THRESHOLD = float(os.environ.get('FACE_BLUR_THRESHOLD', 40))
 # is written. The distance is deliberately tighter than the recognition
 # threshold: refusing a legitimate enrolment is worse than missing a duplicate,
 # which training will surface anyway.
+# Where the OpenCV DNN face detector runs: 'cpu', 'opencl', 'opencl_fp16', or
+# 'auto' to try OpenCL and fall back if the driver will not take the model.
+#
+# Defaults to the CPU because that is what measurement said, on the machine this
+# was developed against - 15.3ms per frame against 16.2 for OpenCL and 16.6 for
+# FP16. OpenCV could not compile the ReLU kernel there (CL_BUILD_PROGRAM_FAILURE),
+# so it ran those layers on the CPU anyway while still paying to move data to the
+# GPU and back. Different hardware and drivers may well go the other way, which
+# is why the option stays: set FACE_DNN_TARGET=opencl and time it before
+# believing either answer.
+#
+# OpenCL rather than CUDA because the OpenCV wheels on PyPI are built without
+# CUDA. Note this path never used TensorFlow, so dropping native Windows GPU
+# support after TF 2.10 costs it nothing.
+FACE_DNN_TARGET = os.environ.get('FACE_DNN_TARGET', 'cpu')
+
 # Capture resolution. Smaller frames cost less to run a detector over and less
 # to encode, and the SSD downsamples to 300x300 internally regardless, so a
 # larger frame buys nothing but latency.

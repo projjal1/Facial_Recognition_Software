@@ -6,6 +6,8 @@ agree: that a crop always comes out at the configured size, equalised, and that
 blurred crops are recognisably blurred.
 """
 
+from unittest import mock
+
 import cv2
 import numpy as np
 from django.test import SimpleTestCase, override_settings
@@ -60,6 +62,49 @@ class SharpnessTests(SimpleTestCase):
         sharp = rng.integers(0, 255, (128, 128), dtype=np.uint8)
         self.assertTrue(faces.is_sharp(sharp))
         self.assertFalse(faces.is_sharp(cv2.GaussianBlur(sharp, (21, 21), 0)))
+
+
+class ConfigureNetTests(SimpleTestCase):
+    """Choosing where the detector runs.
+
+    The fallback is the point: a driver that will not take the model must cost
+    a line in the log, not a broken feed.
+    """
+
+    def net(self):
+        import os
+        from django.conf import settings as s
+        resources = os.path.join(s.BASE_DIR, 'mask', 'resources')
+        return cv2.dnn.readNet(
+            os.path.join(resources, 'deploy.prototxt'),
+            os.path.join(resources, 'res10_300x300_ssd_iter_140000.caffemodel'))
+
+    @override_settings(FACE_DNN_TARGET='cpu')
+    def test_cpu_can_be_forced(self):
+        self.assertEqual(faces.configure_net(self.net()), 'cpu')
+
+    @override_settings(FACE_DNN_TARGET='nonsense')
+    def test_an_unknown_target_falls_back_rather_than_raising(self):
+        self.assertIn(faces.configure_net(self.net()), ('cpu', 'opencl'))
+
+    @override_settings(FACE_DNN_TARGET='auto')
+    def test_auto_reports_whichever_target_it_settled_on(self):
+        self.assertIn(faces.configure_net(self.net()), ('cpu', 'opencl'))
+
+    @override_settings(FACE_DNN_TARGET='auto')
+    def test_a_driver_that_refuses_the_model_falls_back_to_cpu(self):
+        with mock.patch.object(faces, '_probe',
+                               side_effect=cv2.error('no such device')):
+            self.assertEqual(faces.configure_net(self.net()), 'cpu')
+
+    @override_settings(FACE_DNN_TARGET='auto')
+    def test_no_opencl_means_cpu(self):
+        with mock.patch.object(cv2.ocl, 'haveOpenCL', return_value=False):
+            self.assertEqual(faces.configure_net(self.net()), 'cpu')
+
+    def test_detection_still_works_on_whatever_target_was_chosen(self):
+        # Whichever way configure_net went, the detector has to keep answering.
+        self.assertEqual(faces.detect(frame()), [])
 
 
 class DetectTests(SimpleTestCase):

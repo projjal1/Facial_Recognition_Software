@@ -24,6 +24,72 @@ logger = logging.getLogger(__name__)
 
 _net = None
 
+_TARGETS = {
+    'opencl': lambda: cv2.dnn.DNN_TARGET_OPENCL,
+    'opencl_fp16': lambda: cv2.dnn.DNN_TARGET_OPENCL_FP16,
+}
+
+
+def _use_cpu(net):
+    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+    net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+
+
+def _probe(net):
+    """One forward pass, to find out whether the chosen target actually works.
+
+    Setting a target only records a preference; OpenCV reports a problem when
+    it first tries to run the graph. Finding out here means a driver that will
+    not take the model costs one wasted pass at startup rather than an
+    exception in the middle of somebody's video.
+    """
+    blob = cv2.dnn.blobFromImage(
+        np.zeros((300, 300, 3), dtype=np.uint8), 1.0, (300, 300),
+        (104.0, 177.0, 123.0))
+    net.setInput(blob)
+    net.forward()
+
+
+def configure_net(net, name='face detector'):
+    """Point an OpenCV DNN at the GPU when that works, else the CPU.
+
+    Returns the target actually in use, which is worth logging: a silent
+    fallback to the CPU looks identical to a GPU that is simply not helping.
+    """
+    wanted = (getattr(settings, 'FACE_DNN_TARGET', 'auto') or 'auto').strip().lower()
+
+    if wanted == 'cpu':
+        _use_cpu(net)
+        logger.info("%s: on the CPU, by configuration.", name)
+        return 'cpu'
+
+    if wanted not in _TARGETS and wanted != 'auto':
+        logger.warning("Unknown FACE_DNN_TARGET %r; falling back to auto.", wanted)
+        wanted = 'auto'
+
+    if not cv2.ocl.haveOpenCL():
+        _use_cpu(net)
+        logger.info("%s: on the CPU, no OpenCL available.", name)
+        return 'cpu'
+
+    choice = 'opencl' if wanted == 'auto' else wanted
+    cv2.ocl.setUseOpenCL(True)
+    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+    net.setPreferableTarget(_TARGETS[choice]())
+
+    try:
+        _probe(net)
+    except Exception as exc:
+        # Drivers refuse models for their own reasons; none of them are worth
+        # taking the feature down for.
+        logger.warning("%s: OpenCL would not run the model (%s); using the CPU.",
+                       name, exc)
+        _use_cpu(net)
+        return 'cpu'
+
+    logger.info("%s: on the GPU via %s.", name, choice)
+    return choice
+
 
 def _detector():
     """The SSD face detector, loaded once and reused."""
@@ -33,6 +99,7 @@ def _detector():
         _net = cv2.dnn.readNet(
             os.path.join(resources, 'deploy.prototxt'),
             os.path.join(resources, 'res10_300x300_ssd_iter_140000.caffemodel'))
+        configure_net(_net)
         logger.info("Loaded the SSD face detector.")
     return _net
 

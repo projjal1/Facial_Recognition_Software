@@ -13,6 +13,8 @@ import numpy as np
 import imutils
 from django.conf import settings
 
+import faces
+
 # Relative to this file rather than the working directory, so the models are
 # found regardless of where the process was started.
 RESOURCES = os.path.dirname(os.path.abspath(__file__))
@@ -23,6 +25,11 @@ model = tf.keras.models.load_model(os.path.join(RESOURCES, "mask_recog2.h5"))
 prototxtPath = os.path.join(RESOURCES, "deploy.prototxt")
 weightsPath = os.path.join(RESOURCES, "res10_300x300_ssd_iter_140000.caffemodel")
 faceNet = cv2.dnn.readNet(prototxtPath, weightsPath)
+
+# Same detector as the rest of the project, so it gets the same GPU handling.
+# Only this net: the mask classifier is a Keras model, and TensorFlow has had
+# no native Windows GPU support since 2.10.
+faces.configure_net(faceNet, name="mask face detector")
 
 def detect_and_predict_mask(frame, faceNet, maskNet):
 	# obtaining the dimensions of the frame and then constructing a blob from it
