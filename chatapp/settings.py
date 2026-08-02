@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 
 import os
 import secrets
+import sys
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -221,3 +222,10 @@ LOGGING = {
         'level': os.environ.get('DJANGO_LOG_LEVEL', 'INFO'),
     },
 }
+
+# Several tests deliberately drive failure paths, and the resulting warnings and
+# tracebacks are expected output rather than a problem - but interleaved with
+# the progress dots they bury the actual result. Raise the level for test runs
+# only; DJANGO_LOG_LEVEL still wins if it is set explicitly.
+if 'test' in sys.argv and 'DJANGO_LOG_LEVEL' not in os.environ:
+    LOGGING['root']['level'] = 'CRITICAL'

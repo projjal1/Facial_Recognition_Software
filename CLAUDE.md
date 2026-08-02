@@ -22,7 +22,15 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-Tests: every `*/tests.py` is an unmodified stub — there is no test suite. The mechanism if one is added is `python manage.py test <app>` / `python manage.py test <app>.tests.ClassName.test_method`.
+```bash
+python manage.py test
+```
+
+93 tests, roughly 90 seconds — most of that is TensorFlow loading the two bundled models at startup. Narrow the run with `python manage.py test <app>` or `python manage.py test <app>.tests.ClassName.test_method`.
+
+Tests for the root-level modules (`security`, `admin_state`, `face_store`, `streaming`) live in the `tests/` package; each app's own tests are in its `tests.py`. Nothing needs a camera or a trained model: `camera.local_frames` is patched with a finite generator, which is the practical payoff of expressing frame sources as generators. Anything writing to disk redirects `BASE_DIR` or `FACE_IMAGE_ROOT` at a temporary directory — a test that writes to the real `admin_files/` or `face-files/` is a bug.
+
+Application logging drops to `CRITICAL` during test runs (see the tail of `settings.py`), because several tests deliberately drive failure paths and their tracebacks are expected output. Set `DJANGO_LOG_LEVEL` to see them.
 
 ### Environment variables
 

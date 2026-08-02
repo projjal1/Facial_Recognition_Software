@@ -170,7 +170,7 @@ This is a proof-of-concept from a hackathon, not a hardened deployment. Worth kn
 - **Recognition is not identity-aware across a crowd.** The confirm counter is global, so several people in frame at once can produce a log entry for the wrong person.
 - **There is no liveness check** — a printed photo will pass.
 - LBPH training runs on the CPU; a discrete GPU only helps the experimental TensorFlow detectors.
-- There are no tests.
+- The test suite covers access control, validation and the streaming plumbing, but **not recognition accuracy** — no model is trained during tests, and no false-accept or false-reject rate has ever been measured.
 
 ---
 
