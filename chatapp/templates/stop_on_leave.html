@@ -1,0 +1,23 @@
+{% comment %}
+Tells the server the capture page is going away.
+
+The Done button covers leaving deliberately, but closing the tab or clicking a
+navbar link does not - and until the stream's socket write finally fails, the
+detector keeps running a model over every frame for nobody.
+
+sendBeacon rather than fetch: the browser is allowed to cancel in-flight
+requests during page teardown, but is required to deliver a beacon. This is the
+only script in the project; the video itself needs none.
+{% endcomment %}
+<script>
+  (function () {
+    var stopUrl = "{% url 'camera-stop' %}";
+    var token = "{{ csrf_token }}";
+
+    window.addEventListener('pagehide', function () {
+      var payload = new FormData();
+      payload.append('csrfmiddlewaretoken', token);
+      navigator.sendBeacon(stopUrl, payload);
+    });
+  })();
+</script>

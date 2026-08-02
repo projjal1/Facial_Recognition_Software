@@ -17,14 +17,13 @@ import textwrap
 
 import cv2
 import numpy as np
+from django.conf import settings
 from django.http import HttpResponse
 
 logger = logging.getLogger(__name__)
 
 BOUNDARY = 'frame'
 CONTENT_TYPE = 'multipart/x-mixed-replace; boundary=%s' % BOUNDARY
-
-JPEG_QUALITY = 80
 
 
 def mjpeg(frames):
@@ -33,7 +32,8 @@ def mjpeg(frames):
     try:
         for frame in frames:
             ok, buffer = cv2.imencode(
-                '.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), JPEG_QUALITY])
+                '.jpg', frame,
+                [int(cv2.IMWRITE_JPEG_QUALITY), settings.STREAM_JPEG_QUALITY])
             if not ok:
                 logger.warning("Dropped a frame that would not encode as JPEG.")
                 continue

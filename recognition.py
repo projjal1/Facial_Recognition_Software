@@ -75,12 +75,23 @@ def frames(source, names, threshold):
     votes_to_log = settings.FACE_FRAMES_TO_LOG
     votes_to_alert = settings.FACE_FRAMES_TO_ALERT
 
+    detect_every = max(1, settings.FACE_DETECT_EVERY)
+    boxes = []
+    index = 0
+
     for img in source:
         if img is None:
             continue
 
-        detections = list(faces.crops(img))
-        boxes = [box for box, _ in detections]
+        # Detection dominates the per-frame cost. Faces do not move far between
+        # frames, so reusing the last boxes for a frame or two keeps the video
+        # at the camera's rate without changing what gets recognised. Crops are
+        # still taken from the current frame, and every frame still votes.
+        if index % detect_every == 0:
+            boxes = faces.detect(img)
+        index += 1
+
+        detections = [(box, faces.normalise(img, box)) for box in boxes]
 
         for (track, box), (_, crop) in zip(tracker.update(boxes), detections):
             label, _confidence = recognizer.predict(crop)

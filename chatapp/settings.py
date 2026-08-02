@@ -191,6 +191,22 @@ FACE_BLUR_THRESHOLD = float(os.environ.get('FACE_BLUR_THRESHOLD', 40))
 # is written. The distance is deliberately tighter than the recognition
 # threshold: refusing a legitimate enrolment is worse than missing a duplicate,
 # which training will surface anyway.
+# Capture resolution. Smaller frames cost less to run a detector over and less
+# to encode, and the SSD downsamples to 300x300 internally regardless, so a
+# larger frame buys nothing but latency.
+FACE_CAPTURE_WIDTH = int(os.environ.get('FACE_CAPTURE_WIDTH', 640))
+FACE_CAPTURE_HEIGHT = int(os.environ.get('FACE_CAPTURE_HEIGHT', 480))
+
+# Run detection (and the emotion/mask classifiers) every Nth frame, reusing the
+# previous result in between. Video stays at the camera's rate while the
+# expensive work runs a few times a second, which is as often as a label
+# meaningfully changes. 1 disables the throttle.
+FACE_DETECT_EVERY = int(os.environ.get('FACE_DETECT_EVERY', 2))
+
+# Quality of the JPEGs pushed to the browser. Lower is faster to encode and
+# quicker over the wire.
+STREAM_JPEG_QUALITY = int(os.environ.get('STREAM_JPEG_QUALITY', 70))
+
 # How long a new capture waits for the previous one to hand the camera back.
 # Navigating between capture pages relies on this: the old stream is asked to
 # stop and normally lets go within a frame, but the browser gives the server no

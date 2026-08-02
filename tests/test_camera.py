@@ -22,9 +22,14 @@ class FakeCam:
 
     def __init__(self, *args):
         self.released = False
+        self.settings = {}
         FakeCam.opened.append(self)
 
     def isOpened(self):
+        return True
+
+    def set(self, prop, value):
+        self.settings[prop] = value
         return True
 
     def read(self):

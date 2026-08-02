@@ -11,6 +11,7 @@ import tensorflow as tf
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 import numpy as np
 import imutils
+from django.conf import settings
 
 # Relative to this file rather than the working directory, so the models are
 # found regardless of where the process was started.
@@ -80,6 +81,14 @@ def frames(source):
 	recognition.frames(): the caller decides what to do with each frame, which
 	is what lets this feed an HTTP response instead of a desktop session.
 	"""
+	# The SSD and the classifier together are what made this feed lag. Running
+	# them every Nth frame and drawing the last result in between keeps the
+	# video at the camera's rate; whether someone is wearing a mask does not
+	# change faster than that.
+	detect_every = max(1, settings.FACE_DETECT_EVERY)
+	locs, preds = [], []
+	index = 0
+
 	for frame in source:
 		if frame is None:
 			continue
@@ -89,7 +98,9 @@ def frames(source):
 
 		# detect faces in the frame and determine if they are wearing a
     	# face mask or not
-		(locs, preds) = detect_and_predict_mask(frame, faceNet, model)
+		if index % detect_every == 0:
+			(locs, preds) = detect_and_predict_mask(frame, faceNet, model)
+		index += 1
     	# loop over the detected face locations and their corresponding
     	# locations
 		for (box, pred) in zip(locs, preds):

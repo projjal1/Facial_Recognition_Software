@@ -9,6 +9,7 @@ source as a generator keeps the capture loops free of device handling, and the
 
 import logging
 import threading
+import time
 
 import cv2
 import numpy as np
@@ -92,10 +93,64 @@ def release_current():
     return stopped
 
 
+class _Pump:
+    """Reads the camera continuously, keeping only the newest frame.
+
+    Detection and classification are slower than the camera produces frames.
+    Pulling straight from the device means the driver's queue fills with frames
+    nobody has looked at yet, so what reaches the browser gets steadily older -
+    lag that grows the longer the page is open, rather than a fixed delay.
+
+    Reading in the background and discarding anything superseded trades dropped
+    frames, which nobody notices, for staying close to live.
+    """
+
+    def __init__(self, cam, stop):
+        self._cam = cam
+        self._stop = stop
+        self._lock = threading.Lock()
+        self._frame = None
+        self._error = None
+        self._done = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def _run(self):
+        failures = 0
+        while not self._done.is_set() and not self._stop.is_set():
+            ok, img = self._cam.read()
+            if not ok:
+                failures += 1
+                if failures > MAX_READ_FAILURES:
+                    with self._lock:
+                        self._error = ValueError(
+                            "The webcam stopped returning frames. Check that "
+                            "it is still connected.")
+                    return
+                continue
+
+            failures = 0
+            with self._lock:
+                self._frame = img
+
+    def take(self):
+        """The newest unseen frame, or None if nothing has arrived yet."""
+        with self._lock:
+            if self._error is not None:
+                raise self._error
+            frame, self._frame = self._frame, None
+            return frame
+
+    def close(self):
+        self._done.set()
+        self._thread.join(timeout=2)
+
+
 def local_frames(flip=True):
     stop = _device.claim(settings.FACE_CAMERA_HANDOVER_SECONDS)
 
     cam = None
+    pump = None
     try:
         cam = cv2.VideoCapture(0)
         if not cam.isOpened():
@@ -103,22 +158,26 @@ def local_frames(flip=True):
                 "Could not open the server webcam. Check that it is connected "
                 "and not already in use by another program.")
 
-        failures = 0
+        cam.set(cv2.CAP_PROP_FRAME_WIDTH, settings.FACE_CAPTURE_WIDTH)
+        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, settings.FACE_CAPTURE_HEIGHT)
+        # Ignored by some Windows backends, which is why the pump exists too.
+        cam.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+        pump = _Pump(cam, stop)
+
         # Checked between frames, so a page that takes the camera over waits
         # roughly one frame rather than for the old connection to time out.
         while not stop.is_set():
-            ok, img = cam.read()
-            if not ok:
-                failures += 1
-                if failures > MAX_READ_FAILURES:
-                    raise ValueError(
-                        "The webcam stopped returning frames. Check that it is "
-                        "still connected.")
+            img = pump.take()
+            if img is None:
+                # Nothing new yet; yielding here would just resend a frame.
+                time.sleep(0.005)
                 continue
 
-            failures = 0
             yield cv2.flip(img, 1) if flip else img
     finally:
+        if pump is not None:
+            pump.close()
         if cam is not None:
             cam.release()
         _device.relinquish(stop)
