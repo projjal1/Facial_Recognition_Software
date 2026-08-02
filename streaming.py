@@ -13,8 +13,11 @@ process had no window.
 """
 
 import logging
+import textwrap
 
 import cv2
+import numpy as np
+from django.http import HttpResponse
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +52,35 @@ def mjpeg(frames):
         raise
     finally:
         logger.info("Stream finished after %d frames.", sent)
+
+
+def error_image(message, width=640, height=360):
+    """A single JPEG carrying `message`, as bytes.
+
+    Stream endpoints are fetched by an <img> tag, so answering with an HTML
+    error page leaves the viewer looking at a broken image with no idea what
+    went wrong. Drawing the reason into a frame puts it where they are already
+    looking.
+    """
+    canvas = np.full((height, width, 3), 32, dtype=np.uint8)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
+    lines = textwrap.wrap(message, width=46) or ['Unavailable']
+    y = max(40, height // 2 - (len(lines) * 28) // 2)
+
+    for line in lines:
+        cv2.putText(canvas, line, (24, y), font, 0.62, (220, 220, 220), 1,
+                    cv2.LINE_AA)
+        y += 30
+
+    ok, buffer = cv2.imencode('.jpg', canvas)
+    return buffer.tobytes() if ok else b''
+
+
+def error_response(message):
+    """An image/jpeg response for a stream that could not start."""
+    logger.info("Stream refused: %s", message)
+    return HttpResponse(error_image(message), content_type='image/jpeg')
 
 
 def primed(frames):

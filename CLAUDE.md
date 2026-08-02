@@ -92,10 +92,19 @@ Two consequences worth knowing before changing any of it:
   the device. There is no `q` keypress any more, because there is no window.
 - **Errors must be raised before the response starts.** Once bytes are flowing
   there is no way to send a status code. `streaming.primed()` pulls the first
-  frame inside the view precisely so a missing camera or untrained model still
-  renders as a normal error page. Keep new failure modes on that side of the
-  line, and note `feeds.views._not_ready()` does the same job for the page that
-  hosts the video.
+  frame inside the view precisely so a missing camera or untrained model is
+  caught while there is still a way to report it. Keep new failure modes on
+  that side of the line.
+- **A stream endpoint reports failure as a JPEG, not HTML.** It is fetched by an
+  `<img>` tag, so an error page renders as a broken image with no explanation —
+  use `streaming.error_response()`. The pages that *host* the video are ordinary
+  views and do render HTML; `feeds.views._not_ready()` is the check for those.
+- **The camera is handed over, newest request wins.** `camera._Device` asks the
+  current holder to stop and waits up to `FACE_CAMERA_HANDOVER_SECONDS`. This is
+  what makes navigating between the capture pages work: the browser never tells
+  the server it left, and the old response only ends once a socket write fails,
+  which waits on the send buffer. Refusing the new page until then looked like a
+  dead feed.
 
 All four capture paths work this way now — recognition, enrolment, emotion and
 mask. `emotion.resources.cam.frames()` and `mask.resources.webcam.frames()`

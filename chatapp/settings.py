@@ -191,6 +191,12 @@ FACE_BLUR_THRESHOLD = float(os.environ.get('FACE_BLUR_THRESHOLD', 40))
 # is written. The distance is deliberately tighter than the recognition
 # threshold: refusing a legitimate enrolment is worse than missing a duplicate,
 # which training will surface anyway.
+# How long a new capture waits for the previous one to hand the camera back.
+# Navigating between capture pages relies on this: the old stream is asked to
+# stop and normally lets go within a frame, but the browser gives the server no
+# warning, so a little patience beats refusing the new page outright.
+FACE_CAMERA_HANDOVER_SECONDS = float(os.environ.get('FACE_CAMERA_HANDOVER_SECONDS', 5))
+
 FACE_DUPLICATE_THRESHOLD = int(os.environ.get('FACE_DUPLICATE_THRESHOLD', 45))
 FACE_DUPLICATE_CHECK_FRAMES = int(os.environ.get('FACE_DUPLICATE_CHECK_FRAMES', 5))
 

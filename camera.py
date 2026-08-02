@@ -4,8 +4,7 @@ Enrolment and recognition each read from either the webcam attached to the
 server or a remote camera serving JPEG snapshots over HTTP - four combinations
 that previously carried four copies of the same setup code. Expressing each
 source as a generator keeps the capture loops free of device handling, and the
-`finally` guarantees the camera is released even when a consumer stops early,
-which is exactly what happens when a browser closes an MJPEG stream.
+`finally` guarantees the camera is released even when a consumer stops early.
 """
 
 import logging
@@ -14,23 +13,65 @@ import threading
 import cv2
 import numpy as np
 import requests
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
 # Without a timeout a stalled camera hangs the worker thread indefinitely.
 REQUEST_TIMEOUT = 10
 
-# One process cannot open the same webcam twice. Without this, a second viewer
-# gets an empty capture and a confusing failure deep in the loop, instead of a
-# clear "already in use" at the point of asking.
-_local_device = threading.Lock()
+# A camera that has stopped returning frames should end the stream rather than
+# spin reading failures forever.
+MAX_READ_FAILURES = 60
+
+
+class _Device:
+    """Serialises access to the one webcam, with the newest request winning.
+
+    Navigating from one capture page to another is the case that matters. The
+    browser does not tell the server it has gone away; the old response only
+    ends once a write to its socket fails, and that waits for the send buffer
+    to fill - easily longer than someone is willing to stare at a blank frame.
+    Refusing the new page until then means switching between the emotion, mask
+    and enrolment pages appears broken.
+
+    So a new claim asks whoever holds the camera to stop, then queues for it.
+    The incumbent notices between frames and releases on its way out.
+    """
+
+    def __init__(self):
+        self._owner = threading.Lock()
+        self._state = threading.Lock()
+        self._stop = None
+
+    def claim(self, timeout):
+        """Take the camera, returning the Event that asks us to hand it back."""
+        with self._state:
+            if self._stop is not None:
+                logger.info("Asking the current capture to release the camera.")
+                self._stop.set()
+
+        if not self._owner.acquire(timeout=timeout):
+            raise ValueError(
+                "The camera is still in use by another capture and did not "
+                "come free. Close the other page and try again.")
+
+        with self._state:
+            self._stop = threading.Event()
+            return self._stop
+
+    def relinquish(self, token):
+        with self._state:
+            if self._stop is token:
+                self._stop = None
+        self._owner.release()
+
+
+_device = _Device()
 
 
 def local_frames(flip=True):
-    if not _local_device.acquire(blocking=False):
-        raise ValueError(
-            "The server webcam is already streaming to another session. Stop "
-            "that one before starting a new capture.")
+    stop = _device.claim(settings.FACE_CAMERA_HANDOVER_SECONDS)
 
     cam = None
     try:
@@ -40,15 +81,25 @@ def local_frames(flip=True):
                 "Could not open the server webcam. Check that it is connected "
                 "and not already in use by another program.")
 
-        while True:
+        failures = 0
+        # Checked between frames, so a page that takes the camera over waits
+        # roughly one frame rather than for the old connection to time out.
+        while not stop.is_set():
             ok, img = cam.read()
             if not ok:
+                failures += 1
+                if failures > MAX_READ_FAILURES:
+                    raise ValueError(
+                        "The webcam stopped returning frames. Check that it is "
+                        "still connected.")
                 continue
+
+            failures = 0
             yield cv2.flip(img, 1) if flip else img
     finally:
         if cam is not None:
             cam.release()
-        _local_device.release()
+        _device.relinquish(stop)
         logger.info("Released the local webcam.")
 
 

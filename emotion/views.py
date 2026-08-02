@@ -20,20 +20,17 @@ def detect(request):
 @login_required
 def stream(request):
     try:
-        # Drawing the first frame here means a camera that is missing or busy
-        # is still an error page, not a broken image with no explanation.
+        # Drawing the first frame here surfaces a missing or busy camera before
+        # the response starts, while there is still a way to say so.
         source = streaming.primed(cam.frames(camera.local_frames()))
     except ValueError as exc:
-        return render(request, 'live_emotion.html', {'error': str(exc)})
+        return streaming.error_response(str(exc))
     except StopIteration:
-        return render(request, 'live_emotion.html', {
-            'error': 'The camera produced no frames.',
-        })
+        return streaming.error_response('The camera produced no frames.')
     except Exception:
         logger.exception("Emotion stream failed to start.")
-        return render(request, 'live_emotion.html', {
-            'error': 'Could not start the camera for emotion detection.',
-        })
+        return streaming.error_response(
+            'Could not start the camera for emotion detection.')
 
     return StreamingHttpResponse(
         streaming.mjpeg(source), content_type=streaming.CONTENT_TYPE)

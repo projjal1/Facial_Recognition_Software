@@ -105,7 +105,7 @@ def stream(request):
     """The MJPEG body consumed by the <img> tag on the detection page."""
     problem = _not_ready()
     if problem:
-        return render(request, "start_captures.html", {'error': problem})
+        return streaming.error_response(problem)
 
     names = _label_names()
     url = admin_state.read(admin_state.LINK).strip()
@@ -118,19 +118,17 @@ def stream(request):
         else:
             source = identify.captures(names)
 
-        # Draw the first frame here so a missing camera is still an error page.
+        # Draw the first frame here so a missing camera is reported before the
+        # response starts, while there is still a way to say so.
         source = streaming.primed(source)
     except ValueError as exc:
-        return render(request, "start_captures.html", {'error': str(exc)})
+        return streaming.error_response(str(exc))
     except StopIteration:
-        return render(request, "start_captures.html", {
-            'error': 'The camera produced no frames.',
-        })
+        return streaming.error_response('The camera produced no frames.')
     except Exception:
         logger.exception("Detection stream failed to start.")
-        return render(request, "start_captures.html", {
-            'error': 'Could not start detection. Check the camera and the log.',
-        })
+        return streaming.error_response(
+            'Could not start detection. Check the camera and the log.')
 
     return StreamingHttpResponse(
         streaming.mjpeg(source), content_type=streaming.CONTENT_TYPE)

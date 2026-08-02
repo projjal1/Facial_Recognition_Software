@@ -52,7 +52,9 @@ class StreamTests(TestCase):
         body = b''.join(response.streaming_content)
         self.assertEqual(body.count(b'--frame'), FRAME_COUNT)
 
-    def test_a_camera_that_will_not_open_is_reported_as_a_page(self):
+    def test_a_camera_that_will_not_open_is_reported_as_an_image(self):
+        # The stream is loaded by an <img>, so an HTML error page would only
+        # ever show up as a broken image.
         def refuses(*args, **kwargs):
             raise ValueError('Could not open the server webcam.')
             yield  # pragma: no cover - generator marker
@@ -61,8 +63,8 @@ class StreamTests(TestCase):
             response = self.client.get(reverse('emotion-stream'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn('multipart', response['Content-Type'])
-        self.assertContains(response, 'Could not open the server webcam')
+        self.assertEqual(response['Content-Type'], 'image/jpeg')
+        self.assertTrue(response.content.startswith(b'\xff\xd8'))
 
 
 class ModelTests(TestCase):

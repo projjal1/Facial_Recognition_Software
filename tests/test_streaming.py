@@ -47,6 +47,26 @@ class MjpegTests(SimpleTestCase):
         self.assertIn('multipart/x-mixed-replace', streaming.CONTENT_TYPE)
 
 
+class ErrorImageTests(SimpleTestCase):
+
+    def test_is_a_real_jpeg(self):
+        self.assertTrue(streaming.error_image('nope').startswith(b'\xff\xd8'))
+
+    def test_a_long_message_still_produces_an_image(self):
+        long_message = ('The camera is still in use by another capture and did '
+                        'not come free. Close the other page and try again.')
+        self.assertTrue(streaming.error_image(long_message).startswith(b'\xff\xd8'))
+
+    def test_an_empty_message_still_produces_an_image(self):
+        self.assertTrue(streaming.error_image('').startswith(b'\xff\xd8'))
+
+    def test_the_response_is_served_as_an_image(self):
+        # An HTML error page would only ever render as a broken <img>.
+        response = streaming.error_response('camera busy')
+        self.assertEqual(response['Content-Type'], 'image/jpeg')
+        self.assertEqual(response.status_code, 200)
+
+
 class PrimedTests(SimpleTestCase):
 
     def test_setup_failure_surfaces_to_the_caller(self):

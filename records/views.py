@@ -66,21 +66,18 @@ def _stream(request, build_source):
     try:
         folder = _user_folder(username)
         source = build_source(username, len(os.listdir(folder)))
-        # Draw the first frame here so a missing camera is still an error page,
-        # rather than a broken image with no explanation.
+        # Draw the first frame here so a missing camera is reported before the
+        # response starts, while there is still a way to say so.
         source = streaming.primed(source)
     except ValueError as exc:
-        return render(request, 'page1.html', {'error': str(exc)})
+        return streaming.error_response(str(exc))
     except StopIteration:
-        return render(request, 'page1.html', {
-            'error': 'The camera produced no frames.',
-        })
+        return streaming.error_response('The camera produced no frames.')
     except Exception:
         logger.exception("Enrolment stream failed to start for %s.", username)
-        return render(request, 'page1.html', {
-            'error': 'Could not capture from that camera. Check that it is '
-                     'connected and not already in use.',
-        })
+        return streaming.error_response(
+            'Could not capture from that camera. Check that it is connected '
+            'and not already in use.')
 
     return StreamingHttpResponse(
         streaming.mjpeg(source), content_type=streaming.CONTENT_TYPE)
@@ -95,9 +92,8 @@ def stream_local(request):
 def stream_remote(request):
     url = request.session.get(REMOTE_URL_KEY)
     if not url:
-        return render(request, 'page1.html', {
-            'error': 'No camera URL for this session. Submit the address again.',
-        })
+        return streaming.error_response(
+            'No camera URL for this session. Submit the address again.')
 
     return _stream(
         request,

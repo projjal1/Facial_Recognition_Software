@@ -134,9 +134,10 @@ class LocalStreamTests(EnrolmentTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse('enrol-stream-local'))
 
-    def test_a_camera_that_will_not_open_is_reported_as_a_page(self):
-        # The error has to surface before the response starts streaming,
-        # otherwise there is no status code left to send.
+    def test_a_camera_that_will_not_open_is_reported_as_an_image(self):
+        # The error has to surface before the response starts streaming, and as
+        # an image: the stream is loaded by an <img>, so HTML would only ever
+        # show up as a broken image with no explanation.
         def refuses(*args, **kwargs):
             raise ValueError('Could not open the server webcam.')
             yield  # pragma: no cover - generator marker
@@ -145,15 +146,15 @@ class LocalStreamTests(EnrolmentTestCase):
             response = self.client.get(reverse('enrol-stream-local'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn('multipart', response['Content-Type'])
-        self.assertContains(response, 'Could not open the server webcam')
+        self.assertEqual(response['Content-Type'], 'image/jpeg')
+        self.assertTrue(response.content.startswith(b'\xff\xd8'))
 
 
 class RemoteStreamTests(EnrolmentTestCase):
 
     def test_refuses_without_a_url_in_the_session(self):
         response = self.client.get(reverse('enrol-stream-remote'))
-        self.assertContains(response, 'No camera URL')
+        self.assertEqual(response['Content-Type'], 'image/jpeg')
 
     def test_a_refused_url_never_reaches_the_session(self):
         response = self.client.post(reverse('add-face-remote'),
