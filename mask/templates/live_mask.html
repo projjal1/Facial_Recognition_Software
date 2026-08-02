@@ -1,0 +1,29 @@
+{%extends 'home.html'%}
+
+{% block content%}
+
+<h1>Mask detection</h1>
+
+{% if error %}
+<p class="error">{{ error }}</p>
+{% else %}
+
+<p>Faces in view are labelled <b>Mask</b>, <b>Without Mask</b> or
+   <b>Wear Mask Properly</b>, with the model's confidence.</p>
+
+<!-- The browser consumes the multipart stream directly; no JavaScript needed.
+     Leaving this page closes the connection, which releases the camera. -->
+<img src="{% url 'mask-stream' %}" alt="Mask detection feed"
+     style="max-width:100%; border:1px solid #ccc;">
+
+<br><br>
+<p><b>Note:</b></p>
+<p>This is an experimental feature; predictions are indicative rather than reliable.</p>
+<p>Only one capture can use the server webcam at a time.</p>
+
+{% endif %}
+
+<br>
+<a class="btn btn-primary" href="{% url 'home' %}">Done</a>
+
+{%endblock%}

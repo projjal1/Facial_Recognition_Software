@@ -1,8 +1,11 @@
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.http import StreamingHttpResponse
+from django.shortcuts import render
 
+import camera
+import streaming
 from mask.resources import webcam
 
 logger = logging.getLogger(__name__)
@@ -10,14 +13,27 @@ logger = logging.getLogger(__name__)
 
 @login_required
 def start_mask(request):
-    # This opens the camera on the server, so it needs an account behind it even
-    # though the feature itself is not admin-only.
+    """The page that holds the video. Frames come from `stream` below."""
+    return render(request, 'live_mask.html')
+
+
+@login_required
+def stream(request):
     try:
-        webcam.capture()
+        # Drawing the first frame here means a camera that is missing or busy
+        # is still an error page, not a broken image with no explanation.
+        source = streaming.primed(webcam.frames(camera.local_frames()))
+    except ValueError as exc:
+        return render(request, 'live_mask.html', {'error': str(exc)})
+    except StopIteration:
+        return render(request, 'live_mask.html', {
+            'error': 'The camera produced no frames.',
+        })
     except Exception:
-        logger.exception("Mask detection failed.")
-        return render(request, "home.html", {
+        logger.exception("Mask stream failed to start.")
+        return render(request, 'live_mask.html', {
             'error': 'Could not start the camera for mask detection.',
         })
 
-    return redirect("home")
+    return StreamingHttpResponse(
+        streaming.mjpeg(source), content_type=streaming.CONTENT_TYPE)

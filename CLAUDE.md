@@ -83,9 +83,10 @@ Two consequences worth knowing before changing any of it:
   line, and note `feeds.views._not_ready()` does the same job for the page that
   hosts the video.
 
-**Still blocking:** `emotion.views.detect` and `mask.views.start_mask` call
-`cv2.imshow` loops that open a window on the server and hold the request until
-it closes. Those two experimental paths remain desktop-bound.
+All four capture paths work this way now — recognition, enrolment, emotion and
+mask. `emotion.resources.cam.frames()` and `mask.resources.webcam.frames()`
+follow the same shape as `recognition.frames()`: take a frame source, yield
+annotated frames. There is no `cv2.imshow` anywhere in the project.
 
 Because `chatapp/urls.py` includes `emotion.urls` and `mask.urls`, whose views import their `resources` modules at module scope, **TensorFlow loads the `.h5` models at server startup** — the server will not boot without `tensorflow` and `imutils` installed.
 

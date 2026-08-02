@@ -4,4 +4,5 @@ from emotion import views
 
 urlpatterns = [
     path('apps/', views.detect,name='emotion'),
+    path('stream/', views.stream,name='emotion-stream'),
 ]

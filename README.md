@@ -163,8 +163,8 @@ There are no database models — the only table in use is Django's built-in `Use
 
 This is a proof-of-concept from a hackathon, not a hardened deployment. Worth knowing before you rely on it:
 
-- **The experimental emotion and mask detectors still open a window on the server** and hold the request until it closes. Recognition and enrolment no longer do — they stream to the browser — but those two paths remain desktop-bound.
 - **Only one capture can use the server webcam at a time.** A second attempt is refused with a clear message rather than failing obscurely.
+- **The bundled emotion and mask models are Keras 2 artifacts**, loaded through the `tf-keras` compatibility package. That package is maintained but frozen, so the models should eventually be re-saved in the current format.
 - **Debug defaults on.** Set `DJANGO_DEBUG=false` and `DJANGO_ALLOWED_HOSTS` before exposing the app anywhere.
 - **Recognition thresholds are uncalibrated.** They are hand-picked numbers that still differ between the local (53) and remote (48) paths, and no false-accept or false-reject rate has ever been measured. Treat the accuracy of this system as unknown rather than good.
 - **Recognition is not identity-aware across a crowd.** The confirm counter is global, so several people in frame at once can produce a log entry for the wrong person.

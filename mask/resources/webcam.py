@@ -11,12 +11,16 @@ import tensorflow as tf
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 import numpy as np
 import imutils
-from imutils.video import VideoStream
- 
-faceCascade = cv2.CascadeClassifier('mask/resources/haarcascade_frontalface_default.xml')
-model = tf.keras.models.load_model("mask/resources/mask_recog2.h5")
-prototxtPath = "mask/resources/deploy.prototxt"
-weightsPath = "mask/resources/res10_300x300_ssd_iter_140000.caffemodel"
+
+# Relative to this file rather than the working directory, so the models are
+# found regardless of where the process was started.
+RESOURCES = os.path.dirname(os.path.abspath(__file__))
+
+faceCascade = cv2.CascadeClassifier(
+	os.path.join(RESOURCES, 'haarcascade_frontalface_default.xml'))
+model = tf.keras.models.load_model(os.path.join(RESOURCES, "mask_recog2.h5"))
+prototxtPath = os.path.join(RESOURCES, "deploy.prototxt")
+weightsPath = os.path.join(RESOURCES, "res10_300x300_ssd_iter_140000.caffemodel")
 faceNet = cv2.dnn.readNet(prototxtPath, weightsPath)
 
 def detect_and_predict_mask(frame, faceNet, maskNet):
@@ -69,19 +73,22 @@ def detect_and_predict_mask(frame, faceNet, maskNet):
 	return (locs, preds)
 
 
-def capture():
-	# initialize the video stream
-	vs = cv2.VideoCapture(0)
+def frames(source):
+	"""Yield frames from `source` annotated with the mask prediction.
 
-	while True:
-    	# Capturing frame-by-frame, grabbing the frame from the threaded video stream and resize it to have a maximum width of 400 pixels
-		flag,frame = vs.read()
+	A generator rather than a loop owning a cv2 window, for the same reason as
+	recognition.frames(): the caller decides what to do with each frame, which
+	is what lets this feed an HTTP response instead of a desktop session.
+	"""
+	for frame in source:
+		if frame is None:
+			continue
+
+		# resize to have a maximum width of 400 pixels
 		frame = imutils.resize(frame, width=400)
-		
+
 		# detect faces in the frame and determine if they are wearing a
     	# face mask or not
-		faces_list=[]
-		preds=[]
 		(locs, preds) = detect_and_predict_mask(frame, faceNet, model)
     	# loop over the detected face locations and their corresponding
     	# locations
@@ -112,10 +119,4 @@ def capture():
 			cv2.putText(frame, label, (startX, startY - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
 			cv2.rectangle(frame, (startX, startY), (endX, endY), color, 2)
         
-		# Display the resulting frame
-		cv2.imshow('Video', frame)
-		if cv2.waitKey(1) & 0xFF == ord('q'):
-			break
-
-	vs.release()
-	cv2.destroyAllWindows()
+		yield frame

@@ -4,4 +4,5 @@ from mask import views
 
 urlpatterns = [
     path('apps/', views.start_mask,name='face_mask'),
+    path('stream/', views.stream,name='mask-stream'),
 ]

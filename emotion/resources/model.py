@@ -7,7 +7,6 @@ os.environ.setdefault('TF_USE_LEGACY_KERAS', '1')
 
 from tensorflow.keras.models import model_from_json
 import numpy as np
-import tensorflow as tf
 
 class FacialExpressionModel(object):
     EMOTIONS_LIST = ["Angry", "Disgust", "Fear", "Happy", "Neutral", "Sad", "Surprise"]
