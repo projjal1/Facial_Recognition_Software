@@ -24,6 +24,12 @@
 {% endif %}
 
 <br>
-<a class="btn btn-primary" href="{% url 'home' %}">Done</a>
+<!-- Stops the capture rather than only navigating away, so the detector is
+     not left running a model over every frame once nobody is watching. -->
+<form method="POST" action="{% url 'camera-stop' %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{% url 'home' %}">
+    <input class="btn btn-primary" type="submit" value="Done">
+</form>
 
 {%endblock%}

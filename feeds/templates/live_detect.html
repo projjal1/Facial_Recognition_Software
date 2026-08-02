@@ -13,8 +13,11 @@
 
 <br><br>
 
-<form method="POST" action="{% url 'end' %}">
+<!-- Stops the capture rather than only navigating away, so recognition is not
+     left running over every frame once nobody is watching. -->
+<form method="POST" action="{% url 'camera-stop' %}">
     {% csrf_token %}
+    <input type="hidden" name="next" value="{% url 'feed-detect' %}">
     <input class="btn btn-primary" type="submit" value="Stop detection" />
 </form>
 

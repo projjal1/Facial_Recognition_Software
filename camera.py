@@ -66,8 +66,30 @@ class _Device:
                 self._stop = None
         self._owner.release()
 
+    def request_stop(self):
+        """Ask the current holder to finish. True if there was one."""
+        with self._state:
+            if self._stop is None:
+                return False
+            self._stop.set()
+            return True
+
 
 _device = _Device()
+
+
+def release_current():
+    """Stop whatever capture is running, if any.
+
+    Leaving a capture page is not enough on its own: the stream ends only when
+    a write to its socket fails, and until then the detector keeps running a
+    model over every frame for nobody's benefit. Giving the pages a way to say
+    "I am done" turns that into an immediate stop.
+    """
+    stopped = _device.request_stop()
+    if stopped:
+        logger.info("Asked the running capture to stop.")
+    return stopped
 
 
 def local_frames(flip=True):

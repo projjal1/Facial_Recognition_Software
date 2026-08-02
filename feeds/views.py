@@ -9,6 +9,7 @@ from django.http import StreamingHttpResponse
 from django.shortcuts import render
 
 import admin_state
+import camera
 import face_store
 import identify
 import recog
@@ -137,6 +138,9 @@ def stream(request):
 @login_required
 @superuser_required
 def end(request):
+    # Reachable from the training page as "End feed Capture!", so it has to
+    # actually end one rather than just render a different page.
+    camera.release_current()
     return render(request, "start_captures.html")
 
 

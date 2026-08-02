@@ -19,7 +19,13 @@
 
 <br><br>
 
-<a class="btn btn-primary" href="{% url 'reg-face' %}">Done</a>
+<!-- Stops the capture rather than only navigating away, so the camera is not
+     left open once nobody is watching. -->
+<form method="POST" action="{% url 'camera-stop' %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{% url 'reg-face' %}">
+    <input class="btn btn-primary" type="submit" value="Done">
+</form>
 
 <br><br>
 <p><b>Note:</b></p>

@@ -105,6 +105,12 @@ Two consequences worth knowing before changing any of it:
   the server it left, and the old response only ends once a socket write fails,
   which waits on the send buffer. Refusing the new page until then looked like a
   dead feed.
+- **Every capture page ends with a POST to `camera-stop`.** Navigating away does
+  not stop the work behind the page, so the Done and Stop buttons call
+  `camera.release_current()` explicitly — otherwise the emotion or mask model
+  keeps running over every frame long after the viewer has gone. `chatapp.views`
+  holds that view because all four apps share it. Closing the tab outright still
+  relies on the socket write failing; there is no JavaScript to catch it.
 
 All four capture paths work this way now — recognition, enrolment, emotion and
 mask. `emotion.resources.cam.frames()` and `mask.resources.webcam.frames()`

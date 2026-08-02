@@ -10,7 +10,9 @@ import threading
 from unittest import mock
 
 import numpy as np
-from django.test import SimpleTestCase, override_settings
+from django.contrib.auth.models import User
+from django.test import SimpleTestCase, TestCase, override_settings
+from django.urls import reverse
 
 import camera
 
@@ -116,3 +118,55 @@ class HandoverTests(SimpleTestCase):
         camera.cv2.VideoCapture = NeverReady
         with self.assertRaises(ValueError):
             next(camera.local_frames())
+
+    def test_release_current_stops_a_running_capture(self):
+        # What the Done button does: leaving a page otherwise leaves the
+        # detector running a model over every frame for nobody.
+        stream = camera.local_frames()
+        next(stream)
+
+        self.assertTrue(camera.release_current())
+        self.assertEqual(list(stream), [])
+        self.assertTrue(FakeCam.opened[0].released)
+
+    def test_release_current_is_harmless_when_nothing_is_running(self):
+        self.assertFalse(camera.release_current())
+
+
+class StopCameraViewTests(TestCase):
+
+    def setUp(self):
+        User.objects.create_user('s1', password='pw')
+        self.client.login(username='s1', password='pw')
+
+    def test_requires_a_signed_in_user(self):
+        anonymous = self.client_class()
+        response = anonymous.post(reverse('camera-stop'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('login'), response.url)
+
+    def test_post_releases_and_redirects_where_asked(self):
+        with mock.patch('camera.release_current', return_value=True) as release:
+            response = self.client.post(reverse('camera-stop'),
+                                        {'next': reverse('reg-face')})
+        release.assert_called_once_with()
+        self.assertRedirects(response, reverse('reg-face'),
+                             fetch_redirect_response=False)
+
+    def test_get_does_not_stop_anything(self):
+        # A link prefetch should not be able to end someone's capture.
+        with mock.patch('camera.release_current') as release:
+            response = self.client.get(reverse('camera-stop'))
+        release.assert_not_called()
+        self.assertRedirects(response, reverse('home'))
+
+    def test_an_offsite_redirect_target_is_ignored(self):
+        with mock.patch('camera.release_current', return_value=True):
+            response = self.client.post(reverse('camera-stop'),
+                                        {'next': 'https://example.org/'})
+        self.assertRedirects(response, reverse('home'))
+
+    def test_a_missing_target_falls_back_to_home(self):
+        with mock.patch('camera.release_current', return_value=True):
+            response = self.client.post(reverse('camera-stop'))
+        self.assertRedirects(response, reverse('home'))
